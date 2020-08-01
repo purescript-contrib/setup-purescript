@@ -1,0 +1,26 @@
+{
+  "name": "setup-purescript",
+  "version": "0.0.0",
+  "description": "Set up a PureScript toolchain in GitHub Actions",
+  "main": "index.js",
+  "scripts": {
+    "build": "ncc build index.js --minify",
+    "test": "jest"
+  },
+  "keywords": [
+    "github",
+    "actions",
+    "purescript",
+    "spago"
+  ],
+  "author": "Thomas Honeyman",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.2.4",
+    "@actions/tool-cache": "^1.6.0",
+    "semver": "^7.3.2"
+  },
+  "devDependencies": {
+    "@zeit/ncc": "^0.22.3"
+  }
+}

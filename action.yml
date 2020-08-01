@@ -1,0 +1,13 @@
+name: "Set up a PureScript toolchain"
+description: "Install a PureScript toolchain and add it to the PATH"
+author: "Thomas Honeyman <hello@thomashoneyman.com>"
+inputs:
+  purescript-version:
+    description: "The compiler version to install. Examples: latest, 0.13.8"
+    default: "latest"
+  spago-version:
+    description: "The Spago version to install. Examples: latest, 0.15.3"
+    default: "latest"
+runs:
+  using: "node12"
+  main: "dist/index.js"

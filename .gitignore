@@ -1,0 +1,7 @@
+# Ignore dotfiles except for explicit exceptions
+/.*
+!/.gitignore
+!/.github
+
+# Dependencies
+node_modules
