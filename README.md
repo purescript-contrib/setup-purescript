@@ -22,7 +22,7 @@ steps:
 
 ### Use Specific Versions
 
-Use specific versions of PureScript and/or Spago by supplying a valid tag in their respective GitHub repositories:
+Use specific versions of PureScript and/or Spago by supplying a valid semantic version (only exact versions currently supported):
 
 ```yaml
 steps:
