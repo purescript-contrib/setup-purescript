@@ -1,6 +1,8 @@
-const core = require("@actions/core");
-const tc = require("@actions/tool-cache");
-const semver = require("semver");
+import * as core from "@actions/core";
+import * as tc from "@actions/tool-cache";
+import * as semver from "semver";
+import * as path from "path";
+import * as axios from "axios";
 
 const PureScript = "PureScript";
 const Spago = "Spago";
@@ -20,25 +22,26 @@ const toolVersionKey = (tool) => {
   if (tool === Spago) return "spago-version";
 };
 
-const toolLatestTag = (tool) => {
-  // TODO
-  // Get the latest tag automatically:
-  // TAG=$(basename $(curl --location --silent --output /dev/null -w %{url_effective} https://github.com/purescript/purescript/releases/latest))
-  if (tool === PureScript) return "0.13.8";
-  if (tool === Spago) return "0.15.3";
-};
-
-const toolVersion = (tool) => {
+const toolVersion = async (tool) => {
   const key = toolVersionKey(tool);
-  const input = core.getInput(tool);
-  if (input) {
-    if (semver.valid(input)) {
-      return input;
-    } else {
-      core.setFailed(`${input} is not valid for ${key}.`);
+  const input = core.getInput(key);
+
+  if (input === "latest") {
+    core.info(`Fetching latest tag for ${tool}`);
+    const repo = toolRepository(tool);
+    const url = `https://api.github.com/repos/${repo}/releases/latest`;
+
+    try {
+      const response = await axios.get(url);
+      return response.data.tag_name;
+    } catch (err) {
+      core.setFailed(`Failed to get latest tag: ${err}`);
     }
+  } else if (semver.valid(input)) {
+    if (tool === PureScript) return `v${input}`;
+    return input;
   } else {
-    return toolLatestTag(tool);
+    core.setFailed(`${input} is not valid for ${key}.`);
   }
 };
 
@@ -65,39 +68,40 @@ const tarballName = (tool, platform) => {
 };
 
 const downloadTool = async (tool) => {
-  const version = toolVersion(tool);
+  const version = await toolVersion(tool);
   const name = toolName(tool);
 
   // If the tool has previously been downloaded at the provided version, then we
-  // can simply add it to the PATH
+  // can simply add it to the PATH.
   const cached = tc.find(name, version);
   if (cached) {
+    core.info(
+      `Found cached version of ${name} at version ${version}, adding to PATH.`
+    );
     core.addPath(cached);
-    console.log(`Found cached version of ${name}, adding to PATH`);
     return;
   }
+
+  core.info(
+    `Did not find cached version of ${name} at version ${version}, fetching.`
+  );
 
   const platform = parsePlatform(process.platform);
   const tarball = tarballName(tool, platform);
   const repo = toolRepository(tool);
+  const url = `https://github.com/${repo}/releases/download/${version}/${tarball}.tar.gz`;
 
-  const downloadPath = await tc.downloadTool(
-    `https://github.com/${repo}/releases/download/${version}/${tarball}.tar.gz`
-  );
+  const downloadPath = await tc.downloadTool(url);
+  let extracted = await tc.extractTar(downloadPath);
 
-  const extracted = await tc.extractTar(downloadPath);
-
-  switch (tool) {
-    case PureScript:
-      const purescriptPath = await tc.cacheDir(extracted, name, version);
-      core.addPath(purescriptPath);
-      return;
-
-    case Spago:
-      let spagoPath = await tc.cacheFile(extracted, name, name, version);
-      core.addPath(spagoPath);
-      return;
+  if (tool === PureScript) {
+    extracted = path.join(extracted, "purescript");
   }
+
+  const cachedPath = await tc.cacheDir(extracted, name, version);
+  core.info(`Cached path ${cachedPath}.`);
+  core.addPath(cachedPath);
+  return;
 };
 
 const run = async () => {
