@@ -6,27 +6,31 @@ import * as axios from "axios";
 
 const PureScript = "PureScript";
 const Spago = "Spago";
+const Zephyr = "Zephyr";
 
 const toolName = (tool) => {
   if (tool === PureScript) return "purs";
   if (tool === Spago) return "spago";
+  if (tool === Zephyr) return "zephyr";
 };
 
 const toolRepository = (tool) => {
   if (tool === PureScript) return "purescript/purescript";
   if (tool === Spago) return "purescript/spago";
+  if (tool === Zephyr) return "coot/zephyr";
 };
 
 const toolVersionKey = (tool) => {
   if (tool === PureScript) return "purescript-version";
   if (tool === Spago) return "spago-version";
+  if (tool === Zephyr) return "zephyr-version";
 };
 
 const toolVersion = async (tool) => {
   const key = toolVersionKey(tool);
   const input = core.getInput(key);
 
-  if (input === "latest") {
+  if (input == "latest") {
     core.info(`Fetching latest tag for ${tool}`);
     const repo = toolRepository(tool);
     const url = `https://api.github.com/repos/${repo}/releases/latest`;
@@ -38,7 +42,7 @@ const toolVersion = async (tool) => {
       core.setFailed(`Failed to get latest tag: ${err}`);
     }
   } else if (semver.valid(input)) {
-    if (tool === PureScript) return `v${input}`;
+    if (tool === PureScript || tool === Zephyr) return `v${input}`;
     return input;
   } else {
     core.setFailed(`${input} is not valid for ${key}.`);
@@ -64,6 +68,10 @@ const tarballName = (tool, platform) => {
     if (platform === Windows) return "windows";
     if (platform === Mac) return "osx";
     if (platform === Linux) return "linux";
+  } else if (tool === Zephyr) {
+    if (platform === Windows) return "Windows";
+    if (platform === Mac) return "macOS";
+    if (platform === Linux) return "Linux";
   }
 };
 
@@ -96,6 +104,8 @@ const downloadTool = async (tool) => {
 
   if (tool === PureScript) {
     extracted = path.join(extracted, "purescript");
+  } else if (tool === Zephyr) {
+    extracted = path.join(extracted, "zephyr");
   }
 
   const cachedPath = await tc.cacheDir(extracted, name, version);
@@ -107,6 +117,7 @@ const downloadTool = async (tool) => {
 const run = async () => {
   await downloadTool(PureScript);
   await downloadTool(Spago);
+  await downloadTool(Zephyr);
 };
 
 run();
