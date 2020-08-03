@@ -183,7 +183,7 @@ recover :: Aff ~> Aff
 recover action = recovering policy checks \_ -> action
   where
   policy :: RetryPolicyM Aff
-  policy = exponentialBackoff (Milliseconds 2000.0) <> limitRetries 3
+  policy = exponentialBackoff (Milliseconds 3000.0) <> limitRetries 3
 
   checks :: Array (RetryStatus -> Error -> Aff Boolean)
   checks = pure (\_ -> \_ -> pure true)
