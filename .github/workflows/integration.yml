@@ -1,0 +1,19 @@
+name: Integration
+
+on: [push]
+
+jobs:
+  test-install:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./ # equivalent to thomashoneyman/setup-purescript@<branch>
+      - name: Check tools are installed correctly
+        run: |
+          purty src/Main.purs
+          spago build --purs-args '--codegen corefn,js'
+          zephyr -f Main.main

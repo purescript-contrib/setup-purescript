@@ -5,3 +5,8 @@
 
 # Dependencies
 node_modules
+
+# PureScript
+output
+dce-output
+generated-docs

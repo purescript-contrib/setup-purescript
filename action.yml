@@ -8,6 +8,9 @@ inputs:
   spago-version:
     description: "The Spago version to install. Examples: latest, 0.15.3"
     default: "latest"
+  purty-version:
+    description: "The Purty version to install. Examples: latest, 6.2.0"
+    default: "latest"
   zephyr-version:
     description: "The Zephyr version to install. Examples: latest, 0.3.2"
     default: "latest"
