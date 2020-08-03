@@ -183,7 +183,7 @@ recover :: Aff ~> Aff
 recover action = recovering policy checks \_ -> action
   where
   policy :: RetryPolicyM Aff
-  policy = exponentialBackoff (Milliseconds 3000.0) <> limitRetries 3
+  policy = exponentialBackoff (Milliseconds 5000.0) <> limitRetries 3
 
   checks :: Array (RetryStatus -> Error -> Aff Boolean)
   checks = pure (\_ -> \_ -> pure true)
@@ -191,4 +191,4 @@ recover action = recovering policy checks \_ -> action
   exponentialBackoff :: forall d. Duration d => d -> RetryPolicy
   exponentialBackoff base = 
     retryPolicy \(RetryStatus { iterNumber: n }) ->
-      Just $ Milliseconds $ unwrap (fromDuration base) * pow 2.0 (toNumber n)
+      Just $ Milliseconds $ unwrap (fromDuration base) * pow 3.0 (toNumber n)
