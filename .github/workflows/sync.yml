@@ -21,8 +21,6 @@ jobs:
       - name: Update tooling versions
         run: |
           node ./dist/update.js
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit files
         run: |
