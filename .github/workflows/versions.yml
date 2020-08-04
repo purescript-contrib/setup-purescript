@@ -1,0 +1,34 @@
+name: Versions
+
+# TODO: Switch to daily cron job
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # Otherwise the token used is the GITHUB_TOKEN instead of personal
+          persist-credentials: false
+          # Otherwise will fail to push refs to destination repo
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "12"
+
+      - name: Update tooling versions
+        run: |
+          node ./dist/update.js
+
+      - name: Commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "Sync repository with latest tooling" -a
+
+      - name: Push changes
+        uses: ad-m/github-push-action@0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

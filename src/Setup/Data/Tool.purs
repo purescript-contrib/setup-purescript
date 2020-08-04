@@ -2,7 +2,11 @@ module Setup.Data.Tool where
 
 import Prelude
 
+import Data.Enum (class Enum, upFromIncluding)
 import Data.Foldable (elem, fold)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Bounded (genericBottom, genericTop)
+import Data.Generic.Rep.Enum (genericPred, genericSucc)
 import Data.Version (Version)
 import Data.Version as Version
 import Setup.Data.Platform (Platform(..), platform)
@@ -14,6 +18,28 @@ data Tool
   | Zephyr
 
 derive instance eqTool :: Eq Tool
+derive instance ordTool :: Ord Tool
+derive instance genericTool :: Generic Tool _
+
+instance boundedTool :: Bounded Tool where
+  bottom = genericBottom
+  top = genericTop
+
+instance enumTool :: Enum Tool where
+  succ = genericSucc
+  pred = genericPred
+
+-- | A list of all available tools in the toolchain
+allTools :: Array Tool
+allTools = upFromIncluding bottom
+
+-- | Tools that are required in the toolchain
+requiredTools :: Array Tool
+requiredTools = [ PureScript, Spago ]
+
+-- | Tools that are required in the toolchain
+required :: Tool -> Boolean
+required tool = elem tool requiredTools
 
 name :: Tool -> String
 name = case _ of

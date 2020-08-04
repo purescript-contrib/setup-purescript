@@ -8,6 +8,7 @@
   , "argonaut-core"
   , "console"
   , "effect"
+  , "node-fs"
   , "node-path"
   , "node-process"
   , "nullable"

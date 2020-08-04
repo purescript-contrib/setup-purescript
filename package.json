@@ -1,22 +1,11 @@
 {
   "name": "setup-purescript",
-  "version": "0.0.0",
   "description": "Set up a PureScript toolchain in GitHub Actions",
-  "main": "dist/index.js",
-  "scripts": {
-    "package": "spago bundle-module --to output/index.js && ncc build --minify --source-map index.js",
-    "test": "spago test"
-  },
-  "keywords": [
-    "github",
-    "actions",
-    "purescript",
-    "spago",
-    "zephyr",
-    "purty"
-  ],
   "author": "Thomas Honeyman",
   "license": "MIT",
+  "scripts": {
+    "package": "spago bundle-module --to output/index.js && ncc build --minify update.js && mv dist/index.js dist/update.js && ncc build --minify index.js"
+  },
   "dependencies": {
     "@actions/core": "^1.2.4",
     "@actions/tool-cache": "^1.6.0",
