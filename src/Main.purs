@@ -5,8 +5,13 @@ import Prelude
 import Data.Foldable (traverse_)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
-import Setup.Data.Tool (Tool(..))
-import Setup.DownloadTool (downloadTool)
+import Setup.BuildPlan (buildPlan)
+import Setup.Download (download)
 
 main :: Effect Unit
-main = launchAff_ $ traverse_ downloadTool [ PureScript, Spago, Purty, Zephyr ]
+main = launchAff_ do 
+  -- Decide what tools to build
+  plan <- buildPlan 
+
+  -- Build and cache the tools
+  traverse_ download plan

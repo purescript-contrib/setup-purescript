@@ -2,18 +2,16 @@ name: "Set up a PureScript toolchain"
 description: "Install a PureScript toolchain and add it to the PATH"
 author: "Thomas Honeyman <hello@thomashoneyman.com>"
 inputs:
-  purescript-version:
+  purescript:
     description: "The compiler version to install. Examples: latest, 0.13.8"
     default: "latest"
-  spago-version:
+  spago:
     description: "The Spago version to install. Examples: latest, 0.15.3"
     default: "latest"
-  purty-version:
+  purty:
     description: "The Purty version to install. Examples: latest, 6.2.0"
-    default: "latest"
-  zephyr-version:
+  zephyr:
     description: "The Zephyr version to install. Examples: latest, 0.3.2"
-    default: "latest"
 runs:
   using: "node12"
   main: "dist/index.js"

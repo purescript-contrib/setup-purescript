@@ -15,7 +15,6 @@ import Prelude
 
 import Control.Promise (Promise, toAffE)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (un)
 import Data.Nullable (Nullable, notNull, null, toMaybe)
 import Data.String as String
 import Data.Version (Version)
@@ -24,8 +23,10 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Uncurried (EffectFn2, EffectFn3, EffectFn4, runEffectFn2, runEffectFn3, runEffectFn4)
 import Node.Path (FilePath)
-import Setup.Data.Tool (Tool, ToolName(..))
+import Setup.Data.Tool (Tool)
 import Setup.Data.Tool as Tool
+
+type ToolName = String
 
 type CacheOptions =
   { source :: FilePath
@@ -55,7 +56,7 @@ cacheFile { source, tool, version } = do
 
   -- We use the same name for the `targetName` and the `toolName` as the tool
   -- name is the executable name.
-  toAffE (runEffectFn4 cacheFileImpl source (un ToolName toolName) toolName version')
+  toAffE (runEffectFn4 cacheFileImpl source toolName toolName version')
 
 foreign import downloadToolImpl :: EffectFn2 String (Nullable String) (Promise FilePath)
 

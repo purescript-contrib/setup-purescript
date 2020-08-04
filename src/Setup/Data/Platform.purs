@@ -12,4 +12,3 @@ platform = case Process.platform of
   Just Platform.Win32 -> Windows
   Just Platform.Darwin -> Mac
   _ -> Linux
-  

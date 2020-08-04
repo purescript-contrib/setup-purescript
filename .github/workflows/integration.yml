@@ -12,6 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: ./ # equivalent to thomashoneyman/setup-purescript@<branch>
+        with:
+          purty: "latest"
+          zephyr: "latest"
       - name: Check tools are installed correctly
         run: |
           purty src/Main.purs

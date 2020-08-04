@@ -16,8 +16,7 @@ import Prelude
 import Data.Maybe (Maybe)
 import Data.Nullable (Nullable, toMaybe)
 import Effect (Effect)
-import Setup.Data.Input (Input)
-import Setup.Data.Input as Input
+import Setup.Data.Key (Key)
 
 -- | Prepends input path to the PATH (for this action and future actions)
 foreign import addPath :: String -> Effect Unit
@@ -31,11 +30,11 @@ foreign import error :: String -> Effect Unit
 -- | Sets env variable for this action and future actions in the job
 foreign import exportVariable :: { key :: String, value :: String } -> Effect Unit
 
-foreign import getInputImpl :: String -> Effect (Nullable String)
+foreign import getInputImpl :: Key -> Effect (Nullable String)
 
 -- | Gets the value of an input. The value is also trimmed.
-getInput :: Input -> Effect (Maybe String)
-getInput = map toMaybe <<< getInputImpl <<< Input.toKey
+getInput :: Key -> Effect (Maybe String)
+getInput = map toMaybe <<< getInputImpl
 
 -- | Writes info message to user log
 foreign import info :: String -> Effect Unit

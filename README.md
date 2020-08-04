@@ -1,9 +1,12 @@
 # Setup PureScript Action
 
-A GitHub Action which sets up a PureScript toolchain for CI. Contains the following tools:
+A GitHub Action which sets up a PureScript toolchain for CI. Contains the following tools by default:
 
 - The [PureScript compiler](https://github.com/purescript/purescript)
 - The [Spago package manager and build tool](https://github.com/purescript/spago)
+
+You can also optionally include the following tools:
+
 - The [Zephyr dead code elimination tool](https://github.com/coot/zephyr)
 - The [Purty source code formatter](https://gitlab.com/joneshf/purty)
 
@@ -17,7 +20,7 @@ See the [action.yml](action.yml) file for all possible inputs and outputs.
 
 ### Basic
 
-Use the PureScript toolchain with the latest version of each tool (resolved from GitHub releases or the latest tag with a valid semantic version):
+Use the PureScript toolchain with the latest versions of PureScript and Spago:
 
 ```yaml
 steps:
@@ -26,19 +29,21 @@ steps:
   - run: spago build
 ```
 
-### Use Specific Versions
+Other tools are not enabled by default, but you can enable them by specifying their version.
 
-Use a specific version of any tool by supplying a valid semantic version (only exact versions currently supported):
+### Specify Versions
+
+Each tool can accept a semantic version (only exact versions currently supported) or the string `"latest"`. Tools that are not installed by default must be specified this way to be included in the toolchain.
 
 ```yaml
 steps:
   - uses: actions/checkout@v2
   - uses: thomashoneyman/setup-purescript@master
     with:
-      purescript-version: "0.13.8"
-      spago-version: "0.15.3"
-      purty-version: "6.2.0"
-      zephyr-version: "0.3.2"
+      purescript: "0.13.8"
+      spago: "0.15.3"
+      purty: "latest"
+      zephyr: "0.3.2"
   - run: spago build
 ```
 

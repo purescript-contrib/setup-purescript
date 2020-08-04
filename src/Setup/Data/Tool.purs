@@ -3,7 +3,6 @@ module Setup.Data.Tool where
 import Prelude
 
 import Data.Foldable (elem, fold)
-import Data.Newtype (class Newtype)
 import Data.Version (Version)
 import Data.Version as Version
 import Setup.Data.Platform (Platform(..), platform)
@@ -16,13 +15,8 @@ data Tool
 
 derive instance eqTool :: Eq Tool
 
--- | A stable identifier for a tool name, used in caching. Typically the name of
--- | the tool's executable.
-newtype ToolName = ToolName String
-derive instance newtypeToolName :: Newtype ToolName _
-
-name :: Tool -> ToolName
-name = ToolName <<< case _ of
+name :: Tool -> String
+name = case _ of
   PureScript -> "purs"
   Spago -> "spago"
   Purty -> "purty"
