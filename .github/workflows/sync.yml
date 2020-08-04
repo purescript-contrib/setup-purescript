@@ -1,4 +1,4 @@
-name: Versions
+name: Sync Versions
 
 # TODO: Switch to daily cron job
 on: [push]
@@ -21,6 +21,8 @@ jobs:
       - name: Update tooling versions
         run: |
           node ./dist/update.js
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit files
         run: |
@@ -29,6 +31,6 @@ jobs:
           git commit -m "Sync repository with latest tooling" -a
 
       - name: Push changes
-        uses: ad-m/github-push-action@0.6.0
+        uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
