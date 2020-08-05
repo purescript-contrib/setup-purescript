@@ -1,7 +1,9 @@
 name: Sync Versions
 
-# TODO: Switch to daily cron job
-on: [push]
+on:
+  push: {}
+  schedule:
+    - cron: "0 4 * * *"
 
 jobs:
   build:
@@ -24,9 +26,10 @@ jobs:
 
       - name: Commit files
         run: |
-          git pull
+          git config --local pull.ff only
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          git pull
           git commit -m "Sync repository with latest tooling" -a
 
       - name: Push changes
