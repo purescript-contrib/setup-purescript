@@ -1,5 +1,7 @@
 # Setup PureScript Action
 
+![Integration](https://github.com/thomashoneyman/setup-purescript/workflows/Integration/badge.svg) ![Sync Versions](https://github.com/thomashoneyman/setup-purescript/workflows/Sync%20Versions/badge.svg)
+
 A GitHub Action which sets up a PureScript toolchain for CI. Contains the following tools by default:
 
 - The [PureScript compiler](https://github.com/purescript/purescript)
