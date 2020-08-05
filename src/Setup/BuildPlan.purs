@@ -3,6 +3,7 @@ module Setup.BuildPlan (constructBuildPlan, BuildPlan) where
 import Prelude
 
 import Actions.Core as Core
+import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Array as Array
 import Data.Bifunctor (bimap, lmap)
@@ -18,7 +19,6 @@ import Setup.Data.Key (Key)
 import Setup.Data.Key as Key
 import Setup.Data.Tool (Tool, required)
 import Setup.Data.Tool as Tool
-import Setup.Data.VersionsFile (readVersionsFile)
 import Text.Parsing.Parser (parseErrorMessage)
 import Text.Parsing.Parser as ParseError
 
@@ -26,8 +26,8 @@ import Text.Parsing.Parser as ParseError
 type BuildPlan = Array { tool :: Tool, version :: Version }
 
 -- | Construct the list of tools that sholud be downloaded and cached by the action
-constructBuildPlan :: Effect BuildPlan
-constructBuildPlan = map Array.catMaybes $ traverse resolve Tool.allTools
+constructBuildPlan :: Json -> Effect BuildPlan
+constructBuildPlan json = map Array.catMaybes $ traverse (resolve json) Tool.allTools
 
 -- | The parsed value of an input field that specifies a version
 data VersionField = Latest | Exact Version
@@ -42,8 +42,8 @@ getVersionField = map (map parse) <<< Core.getInput
 
 -- | Resolve the exact version to provide for a tool in the environment, based
 -- | on the action.yml file.
-resolve :: Tool -> Effect (Maybe { tool :: Tool, version :: Version })
-resolve tool = do
+resolve :: Json -> Tool -> Effect (Maybe { tool :: Tool, version :: Version })
+resolve versionsContents tool = do
   let key = Key.fromTool tool
   getVersionField key >>= case _ of
     Nothing | required tool -> throwError $ error "No input received for required key."
@@ -63,10 +63,9 @@ resolve tool = do
 
     Right Latest -> do
       Core.info $ fold [ "Fetching latest tag for ", Tool.name tool ]
-      json <- readVersionsFile
 
       let 
-        version = lmap printJsonDecodeError $ (_ .: Tool.name tool) =<< decodeJson json
+        version = lmap printJsonDecodeError $ (_ .: Tool.name tool) =<< decodeJson versionsContents
         parse = lmap parseErrorMessage <<< Version.parseVersion 
 
       case parse =<< version of
