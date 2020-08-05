@@ -22,17 +22,16 @@ jobs:
 
       - name: Update tooling versions
         run: |
-          node ./dist/update.js
-
-      - name: Commit files
-        run: |
           git config --local pull.ff only
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+
           git pull
-          git commit -m "Sync repository with latest tooling" -a
+          node ./dist/update.js
+          git diff --quiet || git commit -a -m "Sync repository with latest tooling."
 
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
+          branch: ${{ github.ref }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
