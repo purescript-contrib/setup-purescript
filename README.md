@@ -106,3 +106,7 @@ npm run package
 ```
 
 This will bundle and minify the source code so it is available to the end user.
+
+## Used By
+- [halogen-formless](https://github.com/thomashoneyman/purescript-halogen-formless/blob/main/.github/workflows/ci.yml)
+- Add your library here
