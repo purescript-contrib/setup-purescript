@@ -49,6 +49,42 @@ steps:
   - run: spago build
 ```
 
+## Full Example Workflow
+
+This workflow is a useful starting point for new projects and libraries. You can add a `.yml` file with the contents below to the `.github/workflows` directory in your project (for example: `.github/workflows/ci.yml`).
+
+```yml
+name: CI
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: thomashoneyman/setup-purescript@main
+
+      - name: Cache PureScript dependencies
+        uses: actions/cache@v2
+        # This cache uses the .dhall files to know when it should reinstall
+        # and rebuild packages. It caches both the installed packages from
+        # the `.spago` directory and compilation artifacts from the `output`
+        # directory. When restored the compiler will rebuild any files that
+        # have changed. If you do not want to cache compiled output, remove
+        # the `output` path.
+        with:
+          key: ${{ runner.os }}-spago-${{ hashFiles('**/*.dhall') }}
+          path: |
+            .spago
+            output
+
+      - run: spago build
+
+      - run: spago test --no-install
+```
+
 ## Development
 
 Enter a development shell with necessary tools installed:
