@@ -14,8 +14,6 @@ You can also optionally include the following tools:
 
 This action is designed to support tools with static binaries. Your PureScript project may also depend on tooling and libraries provided by the NPM ecosystem, in which case you will also want to use the [setup-node](https://github.com/actions/setup-node) action.
 
-> Note: While this action does work, it is currently under development and the API may change. Feel free to experiment using it, but it won't be stable until a v1 release when the PureScript Contributor organization switches to use it.
-
 ## Usage
 
 See the [action.yml](action.yml) file for all possible inputs and outputs.
