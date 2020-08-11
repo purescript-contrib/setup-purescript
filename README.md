@@ -108,5 +108,9 @@ npm run package
 This will bundle and minify the source code so it is available to the end user.
 
 ## Used By
+These libraries and applications are examples of `setup-purescript` in action:
 - [halogen-formless](https://github.com/thomashoneyman/purescript-halogen-formless/blob/main/.github/workflows/ci.yml)
-- Add your library here
+- [halogen-hooks](https://github.com/thomashoneyman/purescript-halogen-hooks/blob/main/.github/workflows/ci.yml)
+- [halogen-realworld](https://github.com/thomashoneyman/purescript-halogen-realworld/blob/main/.github/workflows/ci.yml)
+- [slug](https://github.com/thomashoneyman/purescript-slug/blob/main/.github/workflows/ci.yml)
+- Add your project here
