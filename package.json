@@ -3,15 +3,21 @@
   "description": "Set up a PureScript toolchain in GitHub Actions",
   "author": "Thomas Honeyman",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thomashoneyman/setup-purescript.git"
+  },
   "scripts": {
-    "package": "spago bundle-module --to output/index.js && ncc build --minify update.js && mv dist/index.js dist/update.js && ncc build --minify index.js"
+    "build": "spago bundle-module --to output/index.js && ncc build --minify update.js && mv dist/index.js dist/update.js && ncc build --minify index.js"
   },
   "dependencies": {
+    "@actions/cache": "^1.0.2",
     "@actions/core": "^1.2.4",
+    "@actions/exec": "^1.0.4",
     "@actions/tool-cache": "^1.6.0",
     "xhr2": "^0.2.0"
   },
   "devDependencies": {
-    "@zeit/ncc": "^0.22.3"
+    "@vercel/ncc": "^0.23.0"
   }
 }

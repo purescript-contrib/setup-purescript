@@ -49,14 +49,14 @@ resolve versionsContents tool = do
     Nothing | required tool -> throwError $ error "No input received for required key."
     Nothing -> pure Nothing
     Just field -> map Just $ getVersion field
-  
+
   where
   getVersion :: Either String VersionField -> Effect { tool :: Tool, version :: Version }
   getVersion = case _ of
     Left err -> do
       Core.setFailed $ fold [ "Unable to parse version: ", err ]
       throwError $ error "Unable to complete fetching version."
-    
+
     Right (Exact v) -> do
       Core.info "Found exact version"
       pure { tool, version: v }
@@ -64,9 +64,9 @@ resolve versionsContents tool = do
     Right Latest -> do
       Core.info $ fold [ "Fetching latest tag for ", Tool.name tool ]
 
-      let 
+      let
         version = lmap printJsonDecodeError $ (_ .: Tool.name tool) =<< decodeJson versionsContents
-        parse = lmap parseErrorMessage <<< Version.parseVersion 
+        parse = lmap parseErrorMessage <<< Version.parseVersion
 
       case parse =<< version of
         Left e -> do
@@ -75,4 +75,3 @@ resolve versionsContents tool = do
 
         Right v ->
           pure { tool, version: v }
-    
