@@ -8,6 +8,9 @@ inputs:
   spago:
     description: "The Spago version to install. Examples: latest, 0.15.3"
     default: "latest"
+  psa:
+    description: "The psa version to install. Examples: latest, 0.7.2"
+    default: "latest"
   purty:
     description: "The Purty version to install. Examples: latest, 6.2.0"
   zephyr:
@@ -16,5 +19,5 @@ runs:
   using: "node12"
   main: "dist/index.js"
 branding:
-  icon: 'download'
-  color: 'gray-dark'
+  icon: "download"
+  color: "gray-dark"

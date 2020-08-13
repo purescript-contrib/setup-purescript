@@ -6,13 +6,14 @@ A GitHub Action which sets up a PureScript toolchain for CI. Contains the follow
 
 - The [PureScript compiler](https://github.com/purescript/purescript)
 - The [Spago package manager and build tool](https://github.com/purescript/spago)
+- The [`psa` error reporting frontend for the compiler](https://github.com/natefaubion/purescript-psa)
 
 You can also optionally include the following tools:
 
 - The [Zephyr dead code elimination tool](https://github.com/coot/zephyr)
 - The [Purty source code formatter](https://gitlab.com/joneshf/purty)
 
-This action is designed to support tools with static binaries. Your PureScript project may also depend on tooling and libraries provided by the NPM ecosystem, in which case you will also want to use the [setup-node](https://github.com/actions/setup-node) action.
+This action is designed to support PureScript tools. Your PureScript project may also depend on tooling and libraries provided by the NPM ecosystem, in which case you will also want to use the [setup-node](https://github.com/actions/setup-node) action.
 
 ## Usage
 
@@ -41,6 +42,7 @@ steps:
   - uses: thomashoneyman/setup-purescript@main
     with:
       purescript: "0.13.8"
+      psa: "0.7.2"
       spago: "0.15.3"
       purty: "latest"
       zephyr: "0.3.2"
@@ -61,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - uses: thomashoneyman/setup-purescript@main
 
       - name: Cache PureScript dependencies
@@ -102,7 +104,7 @@ npm install
 GitHub Actions uses the `action.yml` file to define the action and the `dist/index.js` file to execute it. After making any changes to the source code, make sure those changes are visible by running:
 
 ```sh
-npm run package
+npm run build
 ```
 
 This will bundle and minify the source code so it is available to the end user.
