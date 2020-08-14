@@ -1,6 +1,8 @@
 # Setup PureScript Action
 
-[![Integration](https://github.com/thomashoneyman/setup-purescript/workflows/Integration/badge.svg?branch=main)](https://github.com/thomashoneyman/setup-purescript/actions?query=workflow%3AIntegration+branch%3Amain) [![Sync Versions](https://github.com/thomashoneyman/setup-purescript/workflows/Sync%20Versions/badge.svg?branch=main)](https://github.com/thomashoneyman/setup-purescript/actions?query=workflow%3A"Sync+Versions"+branch%3Amain)
+[![Integration](https://github.com/thomashoneyman/setup-purescript/workflows/Integration/badge.svg?branch=main)](https://github.com/thomashoneyman/setup-purescript/actions?query=workflow%3AIntegration+branch%3Amain)
+[![Sync Versions](https://github.com/thomashoneyman/setup-purescript/workflows/Sync%20Versions/badge.svg?branch=main)](https://github.com/thomashoneyman/setup-purescript/actions?query=workflow%3A"Sync+Versions"+branch%3Amain)
+[![Maintainer: thomashoneyman](https://img.shields.io/badge/maintainer-thomashoneyman-teal.svg)](http://github.com/thomashoneyman)
 
 A GitHub Action which sets up a PureScript toolchain for CI. Contains the following tools by default:
 
@@ -26,7 +28,7 @@ Use the PureScript toolchain with the latest versions of PureScript and Spago:
 ```yaml
 steps:
   - uses: actions/checkout@v2
-  - uses: thomashoneyman/setup-purescript@main
+  - uses: purescript-contrib/setup-purescript@main
   - run: spago build
 ```
 
@@ -39,7 +41,7 @@ Each tool can accept a semantic version (only exact versions currently supported
 ```yaml
 steps:
   - uses: actions/checkout@v2
-  - uses: thomashoneyman/setup-purescript@main
+  - uses: purescript-contrib/setup-purescript@main
     with:
       purescript: "0.13.8"
       psa: "0.7.2"
@@ -64,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: thomashoneyman/setup-purescript@main
+      - uses: purescript-contrib/setup-purescript@main
 
       - name: Cache PureScript dependencies
         uses: actions/cache@v2
