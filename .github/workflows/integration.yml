@@ -14,12 +14,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: ./ # equivalent to thomashoneyman/setup-purescript@<branch>
+
+      - uses: ./ # equivalent to purescript-contrib/setup-purescript@<branch>
         with:
           purty: "latest"
           zephyr: "latest"
-      - name: Check tools are installed correctly
-        run: |
-          purty src/Main.purs
-          spago build --purs-args '--censor-lib --strict --codegen corefn,js'
-          zephyr -f Main.main
+
+      - name: Check purty is installed correctly
+        run: purty src/Main.purs
+     
+      - name: Check spago, psa, and purs are installed correctly
+        run: spago build --purs-args '--censor-lib --strict --codegen corefn,js'
+      
+      - name: Check zephyr is installed correctly
+        run: zephyr -f Main.main
