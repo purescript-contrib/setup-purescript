@@ -17,5 +17,5 @@
   , "versions"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs", "test/**/*.purs" ]
+, sources = [ "src/**/*.purs", "test/**/*.purs", "/Users/wahl/purescript/purescript-github-actions-toolkit/src/GitHub/Actions/*.purs" ]
 }

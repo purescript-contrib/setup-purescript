@@ -3,9 +3,12 @@ module Setup.Data.Key
   , fromTool
   ) where
 
+import Data.Newtype (class Newtype)
 import Setup.Data.Tool (Tool(..))
 
 newtype Key = Key String
+
+derive instance newtypeKey :: Newtype Key _
 
 purescriptKey :: Key
 purescriptKey = Key "purescript"
