@@ -23,3 +23,23 @@ in  upstream
     , version =
         "v5.0.1"
     }
+
+  with purescript-github-actions-toolkit =
+    { dependencies =
+        [ "aff"
+        , "aff-promise"
+        , "console"
+        , "effect"
+        , "foreign-object"
+        , "heterogeneous"
+        , "node-buffer"
+        , "node-path"
+        , "node-streams"
+        , "nullable"
+        , "psci-support"
+        , "transformers"
+        , "versions"
+        ]
+    , repo = "https://github.com/colinwahl/purescript-github-actions-toolkit.git"
+    , version = "main"
+    }

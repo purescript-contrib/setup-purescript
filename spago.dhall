@@ -13,9 +13,10 @@
   , "node-process"
   , "nullable"
   , "psci-support"
+  , "purescript-github-actions-toolkit"
   , "record"
   , "versions"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs", "test/**/*.purs", "/Users/wahl/purescript/purescript-github-actions-toolkit/src/GitHub/Actions/*.purs" ]
+, sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
