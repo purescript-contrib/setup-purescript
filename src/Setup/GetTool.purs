@@ -2,7 +2,7 @@ module Setup.GetTool (getTool) where
 
 import Prelude
 
-import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
+import Control.Monad.Except.Trans (ExceptT, mapExceptT)
 import Data.Foldable (fold)
 import Data.Maybe (Maybe(..))
 import Data.Version (Version)
@@ -25,9 +25,7 @@ getTool { tool, version } = do
 
   case installMethod of
     Tarball opts -> do
-      let
-        hoist = runExceptT >>> liftEffect >>> ExceptT
-      mbPath <- hoist $ ToolCache.find { arch: Nothing, toolName: name, versionSpec: Version.showVersion version }
+      mbPath <- mapExceptT liftEffect $ ToolCache.find { arch: Nothing, toolName: name, versionSpec: Version.showVersion version }
       case mbPath of
         Just path -> liftEffect do
           Core.info $ fold [ "Found cached version of ", name ]

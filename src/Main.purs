@@ -2,7 +2,7 @@ module Main where
 
 import Prelude
 
-import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
+import Control.Monad.Except.Trans (mapExceptT, runExceptT)
 import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
@@ -17,7 +17,7 @@ import Setup.UpdateVersions (updateVersions)
 
 main :: Json -> Effect Unit
 main json = runAff_ go $ runExceptT do
-  tools <- ExceptT (liftEffect (runExceptT (constructBuildPlan json)))
+  tools <- mapExceptT liftEffect $ constructBuildPlan json
   traverse_ getTool tools
   where
   go res = case join res of
