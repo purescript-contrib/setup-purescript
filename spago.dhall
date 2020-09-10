@@ -8,6 +8,7 @@
   , "argonaut-core"
   , "console"
   , "effect"
+  , "github-actions-toolkit"
   , "node-fs"
   , "node-path"
   , "node-process"
