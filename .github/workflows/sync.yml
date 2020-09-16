@@ -21,13 +21,14 @@ jobs:
 
       - name: Update tooling versions
         run: |
-          git config --local pull.ff only
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          # git config --local pull.ff only
+          # git config --local user.email "action@github.com"
+          # git config --local user.name "GitHub Action"
 
-          git pull
-          node ./dist/update.js
-          git diff --quiet || git commit -a -m "Sync repository with latest tooling."
+          # git pull
+          # node ./dist/update.js
+          # git diff --quiet || git commit -a -m "Sync repository with latest tooling."
+          echo "Temporarily disabled"
 
       - name: Push changes
         uses: ad-m/github-push-action@master
