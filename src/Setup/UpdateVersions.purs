@@ -92,7 +92,11 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
                 [ "Failed to decode tag from GitHub response: ", parseErrorMessage e ]
 
             Right v ->
-              pure v
+              if Version.isPreRelease v then
+                throwError $ error $ fold
+                  [ "Latest version is prerelease version: ", show v ]
+              else
+                pure v
 
   -- If a tool doesn't use GitHub releases and instead only tags versions, then
   -- we have to fetch the tags, parse them as appropriate versions, and then sort
