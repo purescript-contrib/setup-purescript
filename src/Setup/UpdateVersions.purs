@@ -3,9 +3,9 @@
 module Setup.UpdateVersions (updateVersions) where
 
 import Prelude
-
 import Affjax as AX
 import Affjax.ResponseFormat as RF
+import Control.Monad.Rec.Class (untilJust)
 import Data.Argonaut.Core (Json, jsonEmptyObject, stringify)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Argonaut.Encode ((:=), (~>))
@@ -14,7 +14,7 @@ import Data.Array as Array
 import Data.Either (Either(..), hush)
 import Data.Foldable (fold)
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.String as String
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
@@ -25,6 +25,8 @@ import Effect.Aff (Aff, Error, Milliseconds(..), delay, error, throwError)
 import Effect.Aff.Retry (RetryPolicy, RetryPolicyM, RetryStatus(..))
 import Effect.Aff.Retry as Retry
 import Effect.Class (liftEffect)
+import Effect.Ref as Ref
+import Foreign.Object (Object)
 import Math (pow)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (writeTextFile)
@@ -36,15 +38,13 @@ import Text.Parsing.Parser (parseErrorMessage)
 -- | Write the latest version of each supported tool
 updateVersions :: Aff Unit
 updateVersions = do
-  versions <- for Tool.allTools \tool -> do
-    delay (Milliseconds 500.0)
-    version <- fetchLatestReleaseVersion tool
-    pure $ Tuple tool version
-
+  versions <-
+    for Tool.allTools \tool -> do
+      delay (Milliseconds 500.0)
+      version <- fetchLatestReleaseVersion tool
+      pure $ Tuple tool version
   let
-    insert obj (Tuple tool version) =
-      Tool.name tool := Version.showVersion version ~> obj
-
+    insert obj (Tuple tool version) = Tool.name tool := Version.showVersion version ~> obj
   liftEffect $ writeVersionsFile $ foldl insert jsonEmptyObject versions
   where
   versionsFilePath :: FilePath
@@ -57,76 +57,101 @@ updateVersions = do
 -- | as listed in GitHub releases, but for tools which don't support GitHub
 -- | releases, falls back to the highest valid semantic version tag for the tool.
 fetchLatestReleaseVersion :: Tool -> Aff Version
-fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
-  PureScript -> fetchFromGitHubReleases
-  Spago -> fetchFromGitHubReleases
-  Psa -> fetchFromGitHubTags
-  -- Technically, Purty is hosted on Gitlab. But without an accessible way to
-  -- fetch the latest release tag from Gitlab via an API, it seems better to fetch
-  -- from the GitHub mirror.
-  Purty -> fetchFromGitHubTags
-  Zephyr -> fetchFromGitHubReleases
+fetchLatestReleaseVersion tool =
+  Tool.repository tool
+    # case tool of
+        PureScript -> fetchFromGitHubReleases
+        Spago -> fetchFromGitHubReleases
+        Psa -> fetchFromGitHubTags
+        -- Technically, Purty is hosted on Gitlab. But without an accessible way to
+        -- fetch the latest release tag from Gitlab via an API, it seems better to fetch
+        -- from the GitHub mirror.
+        Purty -> fetchFromGitHubTags
+        Zephyr -> fetchFromGitHubReleases
   where
   -- TODO: These functions really ought to be in ExceptT to avoid all the
   -- nested branches.
-  fetchFromGitHubReleases repo = recover do
-    let url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases/latest"
+  fetchFromGitHubReleases repo =
+    recover do
+      page <- liftEffect (Ref.new 1)
+      untilJust do
+        versions <- liftEffect (Ref.read page) >>= toolVersions repo
+        when (Array.null versions)
+          $ throwError
+          $ error
+              "Could not find version that is not a pre-release version"
+        let
+          version = Array.find (not <<< Version.isPreRelease) versions
+        when (isNothing version) do
+          liftEffect $ void $ Ref.modify (_ + 1) page
+        pure version
 
-    AX.get RF.json url >>= case _ of
-      Left err -> do
-        throwError (error $ AX.printError err)
+  toolVersions repo page = do
+    let
+      url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases/?per_page=10&page=" <> show (page :: Int)
+    AX.get RF.json url
+      >>= case _ of
+          Left err -> throwError (error $ AX.printError err)
+          Right { body } -> case decodeJson body of
+            Left e -> do
+              throwError $ error
+                $ fold
+                    [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+                    , printJsonDecodeError e
+                    , stringify body
+                    ]
+            Right (tagNames :: Array (Object Json)) ->
+              for tagNames \obj -> case obj .: "tag_name" of
+                Left e ->
+                  throwError $ error
+                    $ fold
+                        [ "Failed to get tag from GitHub response: "
+                        , printJsonDecodeError e
+                        ]
+                Right tagName -> case tagStrToVersion tagName of
+                  Left e ->
+                    throwError $ error
+                      $ fold
+                          [ "Failed to parse version from tag "
+                          , tagName
+                          , ": "
+                          , parseErrorMessage e
+                          ]
+                  Right version -> pure version
 
-      Right { body } -> case (_ .: "tag_name") =<< decodeJson body of
-        Left e -> do
-          throwError $ error $ fold
-            [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
-            , printJsonDecodeError e
-            , stringify body
-            ]
-
-        Right tagStr -> do
-          let tag = fromMaybe tagStr (String.stripPrefix (String.Pattern "v") tagStr)
-          case Version.parseVersion tag of
-            Left e ->
-              throwError $ error $ fold
-                [ "Failed to decode tag from GitHub response: ", parseErrorMessage e ]
-
-            Right v ->
-              if Version.isPreRelease v then
-                throwError $ error $ fold
-                  [ "Latest version is prerelease version: ", show v ]
-              else
-                pure v
+  tagStrToVersion tagStr =
+    tagStr
+      # String.stripPrefix (String.Pattern "v")
+      # fromMaybe tagStr
+      # Version.parseVersion
 
   -- If a tool doesn't use GitHub releases and instead only tags versions, then
   -- we have to fetch the tags, parse them as appropriate versions, and then sort
   -- them according to their semantic version to get the latest one.
-  fetchFromGitHubTags repo = recover do
-    let url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
+  fetchFromGitHubTags repo =
+    recover do
+      let
+        url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
+      AX.get RF.json url
+        >>= case _ of
+            Left err -> do
+              throwError (error $ AX.printError err)
+            Right { body } -> case traverse (_ .: "name") =<< decodeJson body of
+              Left e -> do
+                throwError $ error
+                  $ fold
+                      [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+                      , printJsonDecodeError e
+                      , stringify body
+                      ]
+              Right arr -> do
+                let
+                  tags = Array.catMaybes $ map (tagStrToVersion >>> hush) arr
 
-    AX.get RF.json url >>= case _ of
-      Left err -> do
-        throwError (error $ AX.printError err)
-
-      Right { body } -> case traverse (_ .: "name") =<< decodeJson body of
-        Left e -> do
-          throwError $ error $ fold
-            [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
-            , printJsonDecodeError e
-            , stringify body
-            ]
-
-        Right arr -> do
-          let
-            tags = Array.catMaybes $ map (\t -> hush $ Version.parseVersion $ fromMaybe t $ String.stripPrefix (String.Pattern "v") t) arr
-            sorted = Array.reverse $ Array.sort tags
-
-          case Array.head sorted of
-            Nothing ->
-              throwError $ error "Could not download latest release version."
-
-            Just v ->
-              pure v
+                  sorted = Array.reverse $ Array.sort tags
+                case Array.head sorted of
+                  Nothing -> throwError $ error "Could not download latest release version."
+                  Just v -> pure v
 
 -- Attempt to recover from a failed request by re-attempting according to an
 -- exponential backoff strategy.
@@ -141,6 +166,5 @@ recover action = Retry.recovering policy checks \_ -> action
 
   exponentialBackoff :: Milliseconds -> RetryPolicy
   exponentialBackoff (Milliseconds base) =
-    Retry.retryPolicy
-      \(RetryStatus { iterNumber: n }) ->
-        Just $ Milliseconds $ base * pow 3.0 (toNumber n)
+    Retry.retryPolicy \(RetryStatus { iterNumber: n }) ->
+      Just $ Milliseconds $ base * pow 3.0 (toNumber n)
