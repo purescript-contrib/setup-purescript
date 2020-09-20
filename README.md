@@ -115,7 +115,7 @@ This will bundle and minify the source code so it is available to the end user.
 
 These libraries and applications are examples of `setup-purescript` in action:
 
-- [halogen](https://github.com/purescript-halogen/purescript-halogen/blob/main/.github/workflows/ci.yml)
+- [halogen](https://github.com/purescript-halogen/purescript-halogen/blob/master/.github/workflows/ci.yml)
 - [halogen-realworld](https://github.com/thomashoneyman/purescript-halogen-realworld/blob/main/.github/workflows/ci.yml)
 - [halogen-formless](https://github.com/thomashoneyman/purescript-halogen-formless/blob/main/.github/workflows/ci.yml)
 - [halogen-hooks](https://github.com/thomashoneyman/purescript-halogen-hooks/blob/main/.github/workflows/ci.yml)
