@@ -88,7 +88,7 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
 
   toolVersions repo page = do
     let
-      url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases/?per_page=10&page=" <> show (page :: Int)
+      url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases?per_page=10&page=" <> show (page :: Int)
     AX.get RF.json url
       >>= case _ of
           Left err -> throwError (error $ AX.printError err)
