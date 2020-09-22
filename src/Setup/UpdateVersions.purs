@@ -3,6 +3,7 @@
 module Setup.UpdateVersions (updateVersions) where
 
 import Prelude
+
 import Affjax as AX
 import Affjax.ResponseFormat as RF
 import Control.Monad.Rec.Class (untilJust)
@@ -38,13 +39,15 @@ import Text.Parsing.Parser (parseErrorMessage)
 -- | Write the latest version of each supported tool
 updateVersions :: Aff Unit
 updateVersions = do
-  versions <-
-    for Tool.allTools \tool -> do
-      delay (Milliseconds 500.0)
-      version <- fetchLatestReleaseVersion tool
-      pure $ Tuple tool version
+  versions <- for Tool.allTools \tool -> do
+    delay (Milliseconds 500.0)
+    version <- fetchLatestReleaseVersion tool
+    pure $ Tuple tool version
+
   let
-    insert obj (Tuple tool version) = Tool.name tool := Version.showVersion version ~> obj
+    insert obj (Tuple tool version) =
+      Tool.name tool := Version.showVersion version ~> obj
+
   liftEffect $ writeVersionsFile $ foldl insert jsonEmptyObject versions
   where
   versionsFilePath :: FilePath
@@ -57,34 +60,31 @@ updateVersions = do
 -- | as listed in GitHub releases, but for tools which don't support GitHub
 -- | releases, falls back to the highest valid semantic version tag for the tool.
 fetchLatestReleaseVersion :: Tool -> Aff Version
-fetchLatestReleaseVersion tool =
-  Tool.repository tool
-    # case tool of
-        PureScript -> fetchFromGitHubReleases
-        Spago -> fetchFromGitHubReleases
-        Psa -> fetchFromGitHubTags
-        -- Technically, Purty is hosted on Gitlab. But without an accessible way to
-        -- fetch the latest release tag from Gitlab via an API, it seems better to fetch
-        -- from the GitHub mirror.
-        Purty -> fetchFromGitHubTags
-        Zephyr -> fetchFromGitHubReleases
+fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
+  PureScript -> fetchFromGitHubReleases
+  Spago -> fetchFromGitHubReleases
+  Psa -> fetchFromGitHubTags
+  -- Technically, Purty is hosted on Gitlab. But without an accessible way to
+  -- fetch the latest release tag from Gitlab via an API, it seems better to fetch
+  -- from the GitHub mirror.
+  Purty -> fetchFromGitHubTags
+  Zephyr -> fetchFromGitHubReleases
   where
   -- TODO: These functions really ought to be in ExceptT to avoid all the
   -- nested branches.
-  fetchFromGitHubReleases repo =
-    recover do
-      page <- liftEffect (Ref.new 1)
-      untilJust do
-        versions <- liftEffect (Ref.read page) >>= toolVersions repo
-        when (Array.null versions)
-          $ throwError
-          $ error
-              "Could not find version that is not a pre-release version"
-        let
-          version = Array.find (not <<< Version.isPreRelease) versions
-        when (isNothing version) do
-          liftEffect $ void $ Ref.modify (_ + 1) page
-        pure version
+  fetchFromGitHubReleases repo = recover do
+    page <- liftEffect (Ref.new 1)
+    untilJust do
+      versions <- liftEffect (Ref.read page) >>= toolVersions repo
+      when (Array.null versions)
+        $ throwError
+        $ error
+            "Could not find version that is not a pre-release version"
+      let
+        version = Array.find (not <<< Version.isPreRelease) versions
+      when (isNothing version) do
+        liftEffect $ void $ Ref.modify (_ + 1) page
+      pure version
 
   toolVersions repo page = do
     let
@@ -128,30 +128,32 @@ fetchLatestReleaseVersion tool =
   -- If a tool doesn't use GitHub releases and instead only tags versions, then
   -- we have to fetch the tags, parse them as appropriate versions, and then sort
   -- them according to their semantic version to get the latest one.
-  fetchFromGitHubTags repo =
-    recover do
-      let
-        url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
-      AX.get RF.json url
-        >>= case _ of
-            Left err -> do
-              throwError (error $ AX.printError err)
-            Right { body } -> case traverse (_ .: "name") =<< decodeJson body of
-              Left e -> do
-                throwError $ error
-                  $ fold
-                      [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
-                      , printJsonDecodeError e
-                      , stringify body
-                      ]
-              Right arr -> do
-                let
-                  tags = Array.catMaybes $ map (tagStrToVersion >>> hush) arr
+  fetchFromGitHubTags repo = recover do
+    let url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
 
-                  sorted = Array.reverse $ Array.sort tags
-                case Array.head sorted of
-                  Nothing -> throwError $ error "Could not download latest release version."
-                  Just v -> pure v
+    AX.get RF.json url >>= case _ of
+      Left err -> do
+        throwError (error $ AX.printError err)
+
+      Right { body } -> case traverse (_ .: "name") =<< decodeJson body of
+        Left e -> do
+          throwError $ error $ fold
+            [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+            , printJsonDecodeError e
+            , stringify body
+            ]
+
+        Right arr -> do
+          let
+            tags = Array.catMaybes $ map (tagStrToVersion >>> hush) arr
+            sorted = Array.reverse $ Array.sort tags
+
+          case Array.head sorted of
+            Nothing ->
+              throwError $ error "Could not download latest release version."
+
+            Just v ->
+              pure v
 
 -- Attempt to recover from a failed request by re-attempting according to an
 -- exponential backoff strategy.
@@ -166,5 +168,6 @@ recover action = Retry.recovering policy checks \_ -> action
 
   exponentialBackoff :: Milliseconds -> RetryPolicy
   exponentialBackoff (Milliseconds base) =
-    Retry.retryPolicy \(RetryStatus { iterNumber: n }) ->
-      Just $ Milliseconds $ base * pow 3.0 (toNumber n)
+    Retry.retryPolicy
+      \(RetryStatus { iterNumber: n }) ->
+        Just $ Milliseconds $ base * pow 3.0 (toNumber n)
