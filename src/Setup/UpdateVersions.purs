@@ -12,7 +12,7 @@ import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Argonaut.Encode ((:=), (~>))
 import Data.Array (foldl)
 import Data.Array as Array
-import Data.Either (Either(..), hush)
+import Data.Either (Either(..), hush, isLeft)
 import Data.Foldable (fold)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
@@ -27,14 +27,13 @@ import Effect.Aff.Retry (RetryPolicy, RetryPolicyM, RetryStatus(..))
 import Effect.Aff.Retry as Retry
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
-import Foreign.Object (Object)
+import GitHub.Actions.Core (warning)
 import Math (pow)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (writeTextFile)
 import Node.Path (FilePath)
 import Setup.Data.Tool (Tool(..))
 import Setup.Data.Tool as Tool
-import Text.Parsing.Parser (parseErrorMessage)
 
 -- | Write the latest version of each supported tool
 updateVersions :: Aff Unit
@@ -86,9 +85,10 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
         liftEffect $ void $ Ref.modify (_ + 1) page
       pure version
 
+  toolVersions :: Tool.ToolRepository -> Int -> Aff (Array Version)
   toolVersions repo page = do
     let
-      url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases?per_page=10&page=" <> show (page :: Int)
+      url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases?per_page=10&page=" <> show page
     AX.get RF.json url
       >>= case _ of
           Left err -> throwError (error $ AX.printError err)
@@ -100,24 +100,19 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
                     , printJsonDecodeError e
                     , stringify body
                     ]
-            Right (tagNames :: Array (Object Json)) ->
-              for tagNames \obj -> case obj .: "tag_name" of
+            Right tagNames ->
+              Array.catMaybes <$> for tagNames \obj -> case obj .: "tag_name" of
                 Left e ->
                   throwError $ error
                     $ fold
                         [ "Failed to get tag from GitHub response: "
                         , printJsonDecodeError e
                         ]
-                Right tagName -> case tagStrToVersion tagName of
-                  Left e ->
-                    throwError $ error
-                      $ fold
-                          [ "Failed to parse version from tag "
-                          , tagName
-                          , ": "
-                          , parseErrorMessage e
-                          ]
-                  Right version -> pure version
+                Right tagName -> do
+                  let version = tagStrToVersion tagName
+                  when (isLeft version) do
+                    liftEffect $ warning $ fold ["Got invalid version", tagName, " from ", repo.name]
+                  pure (hush version)
 
   tagStrToVersion tagStr =
     tagStr
