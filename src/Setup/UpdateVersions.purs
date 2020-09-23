@@ -15,7 +15,7 @@ import Data.Array as Array
 import Data.Either (Either(..), hush)
 import Data.Foldable (fold)
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..), fromMaybe, isNothing)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isNothing)
 import Data.String as String
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
@@ -32,6 +32,7 @@ import Math (pow)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (writeTextFile)
 import Node.Path (FilePath)
+import Partial.Unsafe (unsafePartial)
 import Setup.Data.Tool (Tool(..))
 import Setup.Data.Tool as Tool
 
@@ -75,17 +76,20 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
     page <- liftEffect (Ref.new 1)
     untilJust do
       versions <- liftEffect (Ref.read page) >>= toolVersions repo
-      when (Array.null versions)
+      when (isNothing versions)
         $ throwError
         $ error
             "Could not find version that is not a pre-release version"
       let
-        version = Array.find (not <<< Version.isPreRelease) versions
+        version =
+          versions
+            # unsafePartial fromJust
+            # Array.find (not <<< Version.isPreRelease)
       when (isNothing version) do
         liftEffect $ void $ Ref.modify (_ + 1) page
       pure version
 
-  toolVersions :: Tool.ToolRepository -> Int -> Aff (Array Version)
+  toolVersions :: Tool.ToolRepository -> Int -> Aff (Maybe (Array Version))
   toolVersions repo page = do
     let
       url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases?per_page=10&page=" <> show page
@@ -100,36 +104,37 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
                     , printJsonDecodeError e
                     , stringify body
                     ]
-            Right tagNames ->
-              Array.catMaybes <$> for tagNames \obj -> case obj .: "tag_name" of
-                Left e ->
-                  throwError $ error
-                    $ fold
+            Right [] -> pure Nothing
+            Right objects ->
+              Just
+                <$> Array.catMaybes
+                <$> for objects \obj ->
+                  case obj .: "tag_name" of
+                    Left e ->
+                      throwError $ error $ fold
                         [ "Failed to get tag from GitHub response: "
                         , printJsonDecodeError e
                         ]
-                Right tagName ->
-                  case tagStrToVersion tagName of
-                    Left e -> do
-                      liftEffect $ warning
-                        $ fold
+                    Right tagName ->
+                      case tagStrToVersion tagName of
+                        Left e -> do
+                          liftEffect $ warning $ fold
                             [ "Got invalid version"
                             , tagName
                             , " from "
                             , repo.name
                             ]
-                      pure Nothing
-                    Right version -> case obj .: "draft" of
-                      Left e ->
-                        throwError $ error
-                          $ fold
+                          pure Nothing
+                        Right version -> case obj .: "draft" of
+                          Left e ->
+                            throwError $ error $ fold
                               [ "Failed to get draft from GitHub response: "
                               , printJsonDecodeError e
                               ]
-                      Right isDraft ->
-                        if isDraft
-                          then pure Nothing
-                          else pure (Just version)
+                          Right isDraft ->
+                            if isDraft
+                              then pure Nothing
+                              else pure (Just version)
 
   tagStrToVersion tagStr =
     tagStr
