@@ -12,7 +12,7 @@ import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Argonaut.Encode ((:=), (~>))
 import Data.Array (foldl)
 import Data.Array as Array
-import Data.Either (Either(..), hush, isLeft)
+import Data.Either (Either(..), hush)
 import Data.Foldable (fold)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
@@ -108,11 +108,28 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
                         [ "Failed to get tag from GitHub response: "
                         , printJsonDecodeError e
                         ]
-                Right tagName -> do
-                  let version = tagStrToVersion tagName
-                  when (isLeft version) do
-                    liftEffect $ warning $ fold ["Got invalid version", tagName, " from ", repo.name]
-                  pure (hush version)
+                Right tagName ->
+                  case tagStrToVersion tagName of
+                    Left e -> do
+                      liftEffect $ warning
+                        $ fold
+                            [ "Got invalid version"
+                            , tagName
+                            , " from "
+                            , repo.name
+                            ]
+                      pure Nothing
+                    Right version -> case obj .: "draft" of
+                      Left e ->
+                        throwError $ error
+                          $ fold
+                              [ "Failed to get draft from GitHub response: "
+                              , printJsonDecodeError e
+                              ]
+                      Right isDraft ->
+                        if isDraft
+                          then pure Nothing
+                          else pure (Just version)
 
   tagStrToVersion tagStr =
     tagStr
