@@ -1,8 +1,6 @@
 name: Sync Versions
 
-on:
-  schedule:
-    - cron: "0 4 * * *"
+on: push
 
 jobs:
   build:
