@@ -16,6 +16,7 @@
   , "psci-support"
   , "record"
   , "versions"
+  , "monad-loops"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
