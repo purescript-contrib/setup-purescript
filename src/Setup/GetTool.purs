@@ -23,6 +23,8 @@ getTool { tool, version } = do
     name = Tool.name tool
     installMethod = Tool.installMethod tool version
 
+  liftEffect $ Core.info $ fold [ "Fetching ", name ]
+
   case installMethod of
     Tarball opts -> do
       mbPath <- mapExceptT liftEffect $ ToolCache.find { arch: Nothing, toolName: name, versionSpec: Version.showVersion version }
