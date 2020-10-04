@@ -18,7 +18,9 @@ import Setup.UpdateVersions (updateVersions)
 main :: Json -> Effect Unit
 main json = runAff_ go $ runExceptT do
   tools <- mapExceptT liftEffect $ constructBuildPlan json
+  liftEffect $ Core.info "Constructed build plan."
   traverse_ getTool tools
+  liftEffect $ Core.info "Fetched tools."
   where
   go res = case join res of
     Left err -> Core.setFailed (message err)
