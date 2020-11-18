@@ -13,7 +13,7 @@ import Data.Argonaut.Encode ((:=), (~>))
 import Data.Array (foldl)
 import Data.Array as Array
 import Data.Either (Either(..), hush)
-import Data.Foldable (fold)
+import Data.Foldable (fold, maximum)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.String as String
@@ -128,9 +128,9 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
                               , printJsonDecodeError e
                               ]
                           Right isDraft ->
-                            if isDraft
-                              then pure Nothing
-                              else pure (Just version)
+                            pure if isDraft
+                                 then Nothing
+                                 else Just version
 
   tagStrToVersion tagStr =
     tagStr
@@ -158,10 +158,9 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
 
         Right arr -> do
           let
-            tags = Array.catMaybes $ map (tagStrToVersion >>> hush) arr
-            sorted = Array.reverse $ Array.sort tags
+            tags = Array.mapMaybe (tagStrToVersion >>> hush) arr
 
-          case Array.head sorted of
+          case maximum tags of
             Nothing ->
               throwError $ error "Could not download latest release version."
 
