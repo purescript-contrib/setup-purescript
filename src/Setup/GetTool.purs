@@ -36,7 +36,6 @@ getTool { tool, version } = do
         Nothing -> do
           liftEffect $ Core.debug $ fold [ "Downloading path ", opts.source ]
           downloadPath <- ToolCache.downloadTool' opts.source
-          liftEffect $ Core.debug $ fold [ "Downloaded to ", downloadPath ]
           extractedPath <- ToolCache.extractTar' downloadPath
           cached <- ToolCache.cacheFile { sourceFile: opts.getExecutablePath extractedPath, tool: name, version: Version.showVersion version, targetFile: name, arch: Nothing }
 
