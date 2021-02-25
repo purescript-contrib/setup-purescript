@@ -3,7 +3,8 @@ name: Integration
 on:
   pull_request:
     types: [synchronize]
-  push: {}
+  push:
+    branches: [main]
   schedule:
     - cron: "0 5 * * *"
 
