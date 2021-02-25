@@ -21,7 +21,7 @@ import Setup.UpdateVersions (updateVersions)
 
 main :: Effect Unit
 main = runAff_ go $ runExceptT do
-  versionsString <- liftEffect $ Buffer.toString UTF8 =<< readFile "./versions.json"
+  versionsString <- liftEffect $ Buffer.toString UTF8 =<< readFile "./dist/versions.json"
   versionsJson <- ExceptT $ pure $ lmap error $ Json.jsonParser versionsString
   tools <- mapExceptT liftEffect $ constructBuildPlan versionsJson
   liftEffect $ Core.info "Constructed build plan."
