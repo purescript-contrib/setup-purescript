@@ -3,15 +3,17 @@ module Setup.Data.Tool where
 import Prelude
 
 import Affjax (URL)
+import Data.Either (fromRight)
 import Data.Enum (class Enum, upFromIncluding)
 import Data.Foldable (elem, fold)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Bounded (genericBottom, genericTop)
 import Data.Generic.Rep.Enum (genericPred, genericSucc)
-import Data.Version (Version)
+import Data.Version (Version, parseVersion)
 import Data.Version as Version
 import Node.Path (FilePath)
 import Node.Path as Path
+import Partial.Unsafe (unsafePartial)
 import Setup.Data.Platform (Platform(..), platform)
 
 data Tool
@@ -99,6 +101,8 @@ installMethod tool version = do
     formatGitHub' = formatGitHub <<< formatArgs
     formatBintray' = formatBintray <<< formatArgs
 
+    unsafeVersion str = unsafePartial fromRight $ parseVersion str
+
     executableName = case platform of
       Windows -> toolName <> ".exe"
       _ -> toolName
@@ -109,15 +113,27 @@ installMethod tool version = do
           Windows -> "win64"
           Mac -> "macos"
           Linux -> "linux64"
-      , getExecutablePath: \p -> Path.concat [ p, "purescript", executableName ]
+      , getExecutablePath:
+          \p -> Path.concat [ p, "purescript", executableName ]
       }
 
     Spago -> Tarball
-      { source: formatGitHub' $ case platform of
-          Windows -> "windows"
-          Mac -> "osx"
-          Linux -> "linux"
-      , getExecutablePath: \p -> Path.concat [ p, executableName ]
+      { source: formatGitHub'
+          -- Spago has changed naming conventions from version to version
+          if version >= unsafeVersion "0.18.1" then case platform of
+            Windows -> "Windows"
+            Mac -> "macOS"
+            Linux -> "Linux"
+          else if version == unsafeVersion "0.18.0" then case platform  of
+            Windows -> "windows-latest"
+            Mac -> "macOS-latest"
+            Linux -> "linux-latest"
+          else case platform of
+            Windows -> "windows"
+            Mac -> "osx"
+            Linux -> "linux"
+      , getExecutablePath:
+          \p -> Path.concat [ p, executableName ]
       }
 
     Psa ->
