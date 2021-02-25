@@ -2,22 +2,28 @@ module Main where
 
 import Prelude
 
-import Control.Monad.Except.Trans (mapExceptT, runExceptT)
-import Data.Argonaut.Core (Json)
+import Control.Monad.Except.Trans (ExceptT(..), mapExceptT, runExceptT)
+import Data.Argonaut.Parser as Json
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
 import Effect (Effect)
-import Effect.Aff (launchAff_, runAff_)
+import Effect.Aff (error, launchAff_, runAff_)
 import Effect.Class (liftEffect)
 import Effect.Exception (message)
 import GitHub.Actions.Core as Core
+import Node.Buffer as Buffer
+import Node.Encoding (Encoding(..))
+import Node.FS.Sync (readFile)
 import Setup.BuildPlan (constructBuildPlan)
 import Setup.GetTool (getTool)
 import Setup.UpdateVersions (updateVersions)
 
-main :: Json -> Effect Unit
-main json = runAff_ go $ runExceptT do
-  tools <- mapExceptT liftEffect $ constructBuildPlan json
+main :: Effect Unit
+main = runAff_ go $ runExceptT do
+  versionsString <- liftEffect $ Buffer.toString UTF8 =<< readFile "./versions.json"
+  versionsJson <- ExceptT $ pure $ lmap error $ Json.jsonParser versionsString
+  tools <- mapExceptT liftEffect $ constructBuildPlan versionsJson
   liftEffect $ Core.info "Constructed build plan."
   traverse_ getTool tools
   liftEffect $ Core.info "Fetched tools."
