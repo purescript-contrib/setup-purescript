@@ -24,9 +24,12 @@ jobs:
 
       - name: Check purty is installed correctly
         run: purty src/Main.purs
-     
-      - name: Check spago, psa, and purs are installed correctly
-        run: spago build --purs-args '--censor-lib --strict --codegen corefn,js'
-      
-      - name: Check zephyr is installed correctly
-        run: zephyr -f Main.main
+
+      - name: Check spago and purs are installed correctly
+        # run: spago build --purs-args '--censor-lib --strict --codegen corefn,js'
+        run: |
+          purs --version
+          spago version
+
+      # - name: Check zephyr is installed correctly
+      #   run: zephyr -f Main.main
