@@ -7,7 +7,7 @@ import Prelude
 import Affjax as AX
 import Affjax.ResponseFormat as RF
 import Control.Monad.Rec.Class (untilJust)
-import Data.Argonaut.Core (Json, jsonEmptyObject, stringify)
+import Data.Argonaut.Core (Json, jsonEmptyObject, stringify, stringifyWithIndent)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Argonaut.Encode ((:=), (~>))
 import Data.Array (foldl)
@@ -53,7 +53,7 @@ updateVersions = do
   versionsFilePath = "./dist/versions.json"
 
   writeVersionsFile :: Json -> Effect Unit
-  writeVersionsFile = writeTextFile UTF8 versionsFilePath <<< stringify
+  writeVersionsFile = writeTextFile UTF8 versionsFilePath <<< stringifyWithIndent 2
 
 -- | Find the latest release version for a given tool. Prefers explicit releases
 -- | as listed in GitHub releases, but for tools which don't support GitHub
