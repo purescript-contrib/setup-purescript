@@ -30,7 +30,7 @@ main = runAff_ go $ runExceptT do
 
   go res = case join res of
     Left err -> Core.setFailed (message err)
-    Right a -> pure unit
+    Right _ -> pure unit
 
 update :: Effect Unit
 update = launchAff_ updateVersions

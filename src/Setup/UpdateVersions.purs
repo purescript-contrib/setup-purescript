@@ -7,7 +7,7 @@ import Prelude
 import Affjax as AX
 import Affjax.ResponseFormat as RF
 import Control.Monad.Rec.Class (untilJust)
-import Data.Argonaut.Core (Json, jsonEmptyObject, stringify, stringifyWithIndent)
+import Data.Argonaut.Core (Json, jsonEmptyObject, stringifyWithIndent)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Argonaut.Encode ((:=), (~>))
 import Data.Array (foldl)
@@ -63,10 +63,6 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
   PureScript -> fetchFromGitHubReleases
   Spago -> fetchFromGitHubReleases
   Psa -> fetchFromGitHubTags
-  -- Technically, Purty is hosted on Gitlab. But without an accessible way to
-  -- fetch the latest release tag from Gitlab via an API, it seems better to fetch
-  -- from the GitHub mirror.
-  Purty -> fetchFromGitHubTags
   Zephyr -> fetchFromGitHubReleases
   where
   -- TODO: These functions really ought to be in ExceptT to avoid all the
@@ -98,7 +94,7 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
                 $ fold
                     [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
                     , printJsonDecodeError e
-                    , stringify body
+                    , stringifyWithIndent 2 body
                     ]
             Right [] -> pure Nothing
             Right objects ->
@@ -113,7 +109,7 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
                         ]
                     Right tagName ->
                       case tagStrToVersion tagName of
-                        Left e -> do
+                        Left _ -> do
                           liftEffect $ warning $ fold
                             [ "Got invalid version"
                             , tagName
@@ -153,7 +149,7 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
           throwError $ error $ fold
             [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
             , printJsonDecodeError e
-            , stringify body
+            , stringifyWithIndent 2 body
             ]
 
         Right arr -> do
