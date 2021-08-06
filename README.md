@@ -13,7 +13,6 @@ A GitHub Action which sets up a PureScript toolchain for CI. Contains the follow
 You can also optionally include the following tools:
 
 - The [Zephyr dead code elimination tool](https://github.com/coot/zephyr)
-- The [Purty source code formatter](https://gitlab.com/joneshf/purty)
 
 This action is designed to support PureScript tools. Your PureScript project may also depend on tooling and libraries provided by the NPM ecosystem, in which case you will also want to use the [setup-node](https://github.com/actions/setup-node) action.
 
@@ -43,10 +42,9 @@ steps:
   - uses: actions/checkout@v2
   - uses: purescript-contrib/setup-purescript@main
     with:
-      purescript: "0.13.8"
-      psa: "0.7.2"
-      spago: "0.15.3"
-      purty: "latest"
+      purescript: "0.14.0"
+      psa: "0.8.2"
+      spago: "latest"
       zephyr: "0.3.2"
   - run: spago build
 ```
@@ -118,6 +116,4 @@ These libraries and applications are examples of `setup-purescript` in action:
 - [halogen](https://github.com/purescript-halogen/purescript-halogen/blob/master/.github/workflows/ci.yml)
 - [halogen-realworld](https://github.com/thomashoneyman/purescript-halogen-realworld/blob/main/.github/workflows/ci.yml)
 - [halogen-formless](https://github.com/thomashoneyman/purescript-halogen-formless/blob/main/.github/workflows/ci.yml)
-- [halogen-hooks](https://github.com/thomashoneyman/purescript-halogen-hooks/blob/main/.github/workflows/ci.yml)
 - [slug](https://github.com/thomashoneyman/purescript-slug/blob/main/.github/workflows/ci.yml)
-- Add your project here

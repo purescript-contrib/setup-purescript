@@ -3,24 +3,23 @@ module Setup.Data.Tool where
 import Prelude
 
 import Affjax (URL)
-import Data.Either (fromRight)
+import Data.Either (fromRight')
 import Data.Enum (class Enum, upFromIncluding)
 import Data.Foldable (elem, fold)
 import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Bounded (genericBottom, genericTop)
-import Data.Generic.Rep.Enum (genericPred, genericSucc)
+import Data.Bounded.Generic (genericBottom, genericTop)
+import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Version (Version, parseVersion)
 import Data.Version as Version
 import Node.Path (FilePath)
 import Node.Path as Path
-import Partial.Unsafe (unsafePartial)
+import Partial.Unsafe (unsafeCrashWith)
 import Setup.Data.Platform (Platform(..), platform)
 
 data Tool
   = PureScript
   | Spago
   | Psa
-  | Purty
   | Zephyr
 
 derive instance eqTool :: Eq Tool
@@ -52,7 +51,6 @@ name = case _ of
   PureScript -> "purs"
   Spago -> "spago"
   Psa -> "psa"
-  Purty -> "purty"
   Zephyr -> "zephyr"
 
 -- | The source repository for a tool (whether on GitHub or Gitlab)
@@ -68,9 +66,6 @@ repository = case _ of
 
   Psa ->
     { owner: "natefaubion", name: "purescript-psa" }
-
-  Purty ->
-    { owner: "joneshf", name: "purty" }
 
   Zephyr ->
     { owner: "coot", name: "zephyr" }
@@ -99,9 +94,8 @@ installMethod tool version = do
     formatArgs = { repo: toolRepo, tag: formatTag, tarball: _ }
 
     formatGitHub' = formatGitHub <<< formatArgs
-    formatBintray' = formatBintray <<< formatArgs
 
-    unsafeVersion str = unsafePartial fromRight $ parseVersion str
+    unsafeVersion str = fromRight' (\_ -> unsafeCrashWith "Unexpected Left") $ parseVersion str
 
     executableName = case platform of
       Windows -> toolName <> ".exe"
@@ -109,29 +103,31 @@ installMethod tool version = do
 
   case tool of
     PureScript -> Tarball
-      { source: formatGitHub' case platform of
-          Windows -> "win64"
-          Mac -> "macos"
-          Linux -> "linux64"
+      { source:
+          formatGitHub' case platform of
+            Windows -> "win64"
+            Mac -> "macos"
+            Linux -> "linux64"
       , getExecutablePath:
           \p -> Path.concat [ p, "purescript", executableName ]
       }
 
     Spago -> Tarball
-      { source: formatGitHub'
-          -- Spago has changed naming conventions from version to version
-          if version >= unsafeVersion "0.18.1" then case platform of
-            Windows -> "Windows"
-            Mac -> "macOS"
-            Linux -> "Linux"
-          else if version == unsafeVersion "0.18.0" then case platform  of
-            Windows -> "windows-latest"
-            Mac -> "macOS-latest"
-            Linux -> "linux-latest"
-          else case platform of
-            Windows -> "windows"
-            Mac -> "osx"
-            Linux -> "linux"
+      { source:
+          formatGitHub'
+            -- Spago has changed naming conventions from version to version
+            if version >= unsafeVersion "0.18.1" then case platform of
+              Windows -> "Windows"
+              Mac -> "macOS"
+              Linux -> "Linux"
+            else if version == unsafeVersion "0.18.0" then case platform of
+              Windows -> "windows-latest"
+              Mac -> "macOS-latest"
+              Linux -> "linux-latest"
+            else case platform of
+              Windows -> "windows"
+              Mac -> "osx"
+              Linux -> "linux"
       , getExecutablePath:
           \p -> Path.concat [ p, executableName ]
       }
@@ -139,19 +135,12 @@ installMethod tool version = do
     Psa ->
       NPM (toolRepo.name <> "@" <> Version.showVersion version)
 
-    Purty -> Tarball
-      { source: formatBintray' $ case platform of
-          Windows -> "win"
-          Mac -> "osx"
-          Linux -> "linux"
-      , getExecutablePath: \p -> Path.concat [ p, executableName ]
-      }
-
     Zephyr -> Tarball
-      { source: formatGitHub' $ case platform of
-          Windows -> "Windows"
-          Mac -> "macOS"
-          Linux -> "Linux"
+      { source:
+          formatGitHub' $ case platform of
+            Windows -> "Windows"
+            Mac -> "macOS"
+            Linux -> "Linux"
       , getExecutablePath: \p -> Path.concat [ p, "zephyr", executableName ]
       }
 
@@ -179,21 +168,6 @@ installMethod tool version = do
       , "/releases/download/"
       , tag
       , "/"
-      , tarball
-      , ".tar.gz"
-      ]
-
-  formatBintray :: { repo :: ToolRepository, tag :: String, tarball :: String } -> String
-  formatBintray { repo, tag, tarball } =
-    -- Example: https://dl.bintray.com/joneshf/generic/purty-6.2.0-linux.tar.gz
-    fold
-      [ "https://dl.bintray.com/"
-      , repo.owner
-      , "/generic/"
-      , repo.name
-      , "-"
-      , tag
-      , "-"
       , tarball
       , ".tar.gz"
       ]

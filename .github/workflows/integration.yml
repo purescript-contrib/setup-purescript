@@ -19,14 +19,9 @@ jobs:
 
       - uses: ./ # equivalent to purescript-contrib/setup-purescript@<branch>
         with:
-          purty: "latest"
           zephyr: "latest"
 
-      - name: Check purty is installed correctly
-        run: purty src/Main.purs
-
       - name: Check spago and purs are installed correctly
-        # run: spago build --purs-args '--censor-lib --strict --codegen corefn,js'
         run: |
           purs --version
           spago version
