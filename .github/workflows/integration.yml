@@ -28,4 +28,5 @@ jobs:
           spago version
 
       - name: Check purs-tidy is installed
+        run: |
           purs-tidy --help
