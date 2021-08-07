@@ -1,14 +1,12 @@
 module Setup.Data.Key
   ( Key
   , fromTool
+  , toString
   ) where
 
-import Data.Newtype (class Newtype)
 import Setup.Data.Tool (Tool(..))
 
 newtype Key = Key String
-
-derive instance newtypeKey :: Newtype Key _
 
 purescriptKey :: Key
 purescriptKey = Key "purescript"
@@ -19,12 +17,19 @@ spagoKey = Key "spago"
 psaKey :: Key
 psaKey = Key "psa"
 
+pursTidyKey :: Key
+pursTidyKey = Key "purs-tidy"
+
 zephyrKey :: Key
 zephyrKey = Key "zephyr"
+
+toString :: Key -> String
+toString (Key key) = key
 
 fromTool :: Tool -> Key
 fromTool = case _ of
   PureScript -> purescriptKey
   Spago -> spagoKey
   Psa -> psaKey
+  PursTidy -> pursTidyKey
   Zephyr -> zephyrKey

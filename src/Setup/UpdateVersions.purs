@@ -53,7 +53,7 @@ updateVersions = do
   versionsFilePath = "./dist/versions.json"
 
   writeVersionsFile :: Json -> Effect Unit
-  writeVersionsFile = writeTextFile UTF8 versionsFilePath <<< stringifyWithIndent 2
+  writeVersionsFile = writeTextFile UTF8 versionsFilePath <<< (_ <> "\n") <<< stringifyWithIndent 2
 
 -- | Find the latest release version for a given tool. Prefers explicit releases
 -- | as listed in GitHub releases, but for tools which don't support GitHub
@@ -63,6 +63,7 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
   PureScript -> fetchFromGitHubReleases
   Spago -> fetchFromGitHubReleases
   Psa -> fetchFromGitHubTags
+  PursTidy -> fetchFromGitHubTags
   Zephyr -> fetchFromGitHubReleases
   where
   -- TODO: These functions really ought to be in ExceptT to avoid all the
@@ -84,49 +85,55 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
   toolVersions :: Tool.ToolRepository -> Int -> Aff (Maybe (Array Version))
   toolVersions repo page = do
     let
-      url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/releases?per_page=10&page=" <> show page
-    AX.get RF.json url
-      >>= case _ of
-          Left err -> throwError (error $ AX.printError err)
-          Right { body } -> case decodeJson body of
-            Left e -> do
-              throwError $ error
-                $ fold
-                    [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+      url =
+        "https://api.github.com/repos/"
+          <> repo.owner
+          <> "/"
+          <> repo.name
+          <> "/releases?per_page=10&page="
+          <> show page
+
+    AX.get RF.json url >>= case _ of
+      Left err -> throwError (error $ AX.printError err)
+      Right { body } -> case decodeJson body of
+        Left e -> do
+          throwError $ error
+            $ fold
+              [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+              , printJsonDecodeError e
+              , stringifyWithIndent 2 body
+              ]
+        Right [] -> pure Nothing
+        Right objects ->
+          Just
+            <$> Array.catMaybes
+            <$> for objects \obj ->
+              case obj .: "tag_name" of
+                Left e ->
+                  throwError $ error $ fold
+                    [ "Failed to get tag from GitHub response: "
                     , printJsonDecodeError e
-                    , stringifyWithIndent 2 body
                     ]
-            Right [] -> pure Nothing
-            Right objects ->
-              Just
-                <$> Array.catMaybes
-                <$> for objects \obj ->
-                  case obj .: "tag_name" of
-                    Left e ->
-                      throwError $ error $ fold
-                        [ "Failed to get tag from GitHub response: "
-                        , printJsonDecodeError e
+                Right tagName ->
+                  case tagStrToVersion tagName of
+                    Left _ -> do
+                      liftEffect $ warning $ fold
+                        [ "Got invalid version"
+                        , tagName
+                        , " from "
+                        , repo.name
                         ]
-                    Right tagName ->
-                      case tagStrToVersion tagName of
-                        Left _ -> do
-                          liftEffect $ warning $ fold
-                            [ "Got invalid version"
-                            , tagName
-                            , " from "
-                            , repo.name
-                            ]
-                          pure Nothing
-                        Right version -> case obj .: "draft" of
-                          Left e ->
-                            throwError $ error $ fold
-                              [ "Failed to get draft from GitHub response: "
-                              , printJsonDecodeError e
-                              ]
-                          Right isDraft ->
-                            pure if isDraft
-                                 then Nothing
-                                 else Just version
+                      pure Nothing
+                    Right version -> case obj .: "draft" of
+                      Left e ->
+                        throwError $ error $ fold
+                          [ "Failed to get draft from GitHub response: "
+                          , printJsonDecodeError e
+                          ]
+                      Right isDraft ->
+                        pure
+                          if isDraft then Nothing
+                          else Just version
 
   tagStrToVersion tagStr =
     tagStr

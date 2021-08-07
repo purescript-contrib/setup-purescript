@@ -11,6 +11,8 @@ inputs:
   psa:
     description: "The psa version to install. Examples: latest, 0.7.2"
     default: "latest"
+  purs-tidy:
+    description: "The purs-tidy version to install. Examples: latest, 0.1.1"
   zephyr:
     description: "The Zephyr version to install. Examples: latest, 0.3.2"
 runs:

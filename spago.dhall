@@ -16,7 +16,6 @@
   , "integers"
   , "math"
   , "maybe"
-  , "newtype"
   , "node-buffer"
   , "node-fs"
   , "node-path"

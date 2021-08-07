@@ -19,6 +19,7 @@ jobs:
 
       - uses: ./ # equivalent to purescript-contrib/setup-purescript@<branch>
         with:
+          purs-tidy: "latest"
           zephyr: "latest"
 
       - name: Check spago and purs are installed correctly
@@ -26,5 +27,5 @@ jobs:
           purs --version
           spago version
 
-      # - name: Check zephyr is installed correctly
-      #   run: zephyr -f Main.main
+      - name: Check purs-tidy is installed
+          purs-tidy --help
