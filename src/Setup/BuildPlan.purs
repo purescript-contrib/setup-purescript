@@ -10,7 +10,6 @@ import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (fold)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
 import Data.Traversable (traverse)
 import Data.Version (Version)
 import Data.Version as Version
@@ -39,14 +38,14 @@ data VersionField = Latest | Exact Version
 -- | Attempt to read the value of an input specifying a tool version
 getVersionField :: Key -> ExceptT Error Effect (Maybe VersionField)
 getVersionField key = do
-  value <- Core.getInput' (unwrap key)
+  value <- Core.getInput' (Key.toString key)
   case value of
     "" ->
       pure Nothing
     "latest" ->
       pure (pure Latest)
     val -> case Version.parseVersion val of
-      Left msg ->  do
+      Left msg -> do
         liftEffect $ Core.error $ fold [ "Failed to parse version ", val ]
         throwError (error (ParseError.parseErrorMessage msg))
       Right version ->

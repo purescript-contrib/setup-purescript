@@ -20,6 +20,7 @@ data Tool
   = PureScript
   | Spago
   | Psa
+  | PursTidy
   | Zephyr
 
 derive instance eqTool :: Eq Tool
@@ -51,6 +52,7 @@ name = case _ of
   PureScript -> "purs"
   Spago -> "spago"
   Psa -> "psa"
+  PursTidy -> "purs-tidy"
   Zephyr -> "zephyr"
 
 -- | The source repository for a tool (whether on GitHub or Gitlab)
@@ -66,6 +68,9 @@ repository = case _ of
 
   Psa ->
     { owner: "natefaubion", name: "purescript-psa" }
+
+  PursTidy ->
+    { owner: "natefaubion", name: "purescript-tidy" }
 
   Zephyr ->
     { owner: "coot", name: "zephyr" }
@@ -103,47 +108,44 @@ installMethod tool version = do
 
   case tool of
     PureScript -> Tarball
-      { source:
-          formatGitHub' case platform of
-            Windows -> "win64"
-            Mac -> "macos"
-            Linux -> "linux64"
-      , getExecutablePath:
-          \p -> Path.concat [ p, "purescript", executableName ]
+      { source: formatGitHub' case platform of
+          Windows -> "win64"
+          Mac -> "macos"
+          Linux -> "linux64"
+      , getExecutablePath: \p -> Path.concat [ p, "purescript", executableName ]
       }
 
     Spago -> Tarball
-      { source:
-          formatGitHub'
-            -- Spago has changed naming conventions from version to version
-            if version >= unsafeVersion "0.18.1" then case platform of
-              Windows -> "Windows"
-              Mac -> "macOS"
-              Linux -> "Linux"
-            else if version == unsafeVersion "0.18.0" then case platform of
-              Windows -> "windows-latest"
-              Mac -> "macOS-latest"
-              Linux -> "linux-latest"
-            else case platform of
-              Windows -> "windows"
-              Mac -> "osx"
-              Linux -> "linux"
-      , getExecutablePath:
-          \p -> Path.concat [ p, executableName ]
-      }
-
-    Psa ->
-      NPM (toolRepo.name <> "@" <> Version.showVersion version)
-
-    Zephyr -> Tarball
-      { source:
-          formatGitHub' $ case platform of
+      { source: formatGitHub'
+          -- Spago has changed naming conventions from version to version
+          if version >= unsafeVersion "0.18.1" then case platform of
             Windows -> "Windows"
             Mac -> "macOS"
             Linux -> "Linux"
-      , getExecutablePath: \p -> Path.concat [ p, "zephyr", executableName ]
+          else if version == unsafeVersion "0.18.0" then case platform of
+            Windows -> "windows-latest"
+            Mac -> "macOS-latest"
+            Linux -> "linux-latest"
+          else case platform of
+            Windows -> "windows"
+            Mac -> "osx"
+            Linux -> "linux"
+      , getExecutablePath: \p -> Path.concat [ p, executableName ]
       }
 
+    Psa ->
+      NPM ("purescript-psa@" <> Version.showVersion version)
+
+    PursTidy ->
+      NPM ("purs-tidy@" <> Version.showVersion version)
+
+    Zephyr -> Tarball
+      { source: formatGitHub' $ case platform of
+          Windows -> "Windows"
+          Mac -> "macOS"
+          Linux -> "Linux"
+      , getExecutablePath: \p -> Path.concat [ p, "zephyr", executableName ]
+      }
   where
   -- Format the release tag for a tool at a specific version. Not all tools use
   -- the same format.

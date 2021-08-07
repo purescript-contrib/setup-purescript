@@ -8,7 +8,7 @@ data Platform = Windows | Mac | Linux
 
 -- | Parse a platform value from the `process.platform` key
 platform :: Platform
-platform = case Process.platform of 
+platform = case Process.platform of
   Just Platform.Win32 -> Windows
   Just Platform.Darwin -> Mac
   _ -> Linux
