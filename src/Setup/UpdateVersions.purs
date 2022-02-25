@@ -19,7 +19,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.String as String
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
-import Data.Version (Version)
+import Data.Version (Version, showVersion)
 import Data.Version as Version
 import Effect (Effect)
 import Effect.Aff (Aff, Error, Milliseconds(..), delay, error, throwError)
@@ -34,6 +34,12 @@ import Node.FS.Sync (writeTextFile)
 import Node.Path (FilePath)
 import Setup.Data.Tool (Tool(..))
 import Setup.Data.Tool as Tool
+
+data ReleaseType
+  = OnlyPreReleases Version
+  | OnlyRealReleases
+
+derive instance Eq ReleaseType
 
 -- | Write the latest version of each supported tool
 updateVersions :: Aff Unit
@@ -60,27 +66,41 @@ updateVersions = do
 -- | releases, falls back to the highest valid semantic version tag for the tool.
 fetchLatestReleaseVersion :: Tool -> Aff Version
 fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
-  PureScript -> fetchFromGitHubReleases
-  Spago -> fetchFromGitHubReleases
+  PureScript -> fetchFromGitHubReleases OnlyRealReleases
+  Spago -> fetchFromGitHubReleases OnlyRealReleases
   Psa -> fetchFromGitHubTags
   PursTidy -> fetchFromGitHubTags
-  Zephyr -> fetchFromGitHubReleases
+  Zephyr -> fetchFromGitHubReleases OnlyRealReleases
   where
   -- TODO: These functions really ought to be in ExceptT to avoid all the
   -- nested branches.
-  fetchFromGitHubReleases repo = recover do
+  fetchFromGitHubReleases :: ReleaseType -> Tool.ToolRepository -> Aff Version
+  fetchFromGitHubReleases releaseType repo = recover do
     page <- liftEffect (Ref.new 1)
+    let
+      releaseFilter = case releaseType of
+        OnlyRealReleases ->
+          not <<< Version.isPreRelease
+        OnlyPreReleases expectedV -> do
+          let
+            equating f a b = (f a) == (f b)
+            majorMinorMatch v = equating Version.major expectedV v && equating Version.minor expectedV v
+          majorMinorMatch && Version.isPreRelease
     untilJust do
       versions <- liftEffect (Ref.read page) >>= toolVersions repo
       case versions of
         Just versions' -> do
-          let version = Array.find (not <<< Version.isPreRelease) versions'
+          let version = Array.find releaseFilter versions'
           when (isNothing version) do
             liftEffect $ void $ Ref.modify (_ + 1) page
           pure version
 
         Nothing ->
-          throwError $ error "Could not find version that is not a pre-release version"
+          case releaseType of
+            OnlyRealReleases ->
+              throwError $ error "Could not find version that is not a pre-release version"
+            OnlyPreReleases v ->
+              throwError $ error $ "Could not find a pre-release version of version, " <> showVersion v
 
   toolVersions :: Tool.ToolRepository -> Int -> Aff (Maybe (Array Version))
   toolVersions repo page = do
@@ -99,10 +119,10 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
         Left e -> do
           throwError $ error
             $ fold
-              [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
-              , printJsonDecodeError e
-              , stringifyWithIndent 2 body
-              ]
+                [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+                , printJsonDecodeError e
+                , stringifyWithIndent 2 body
+                ]
         Right [] -> pure Nothing
         Right objects ->
           Just
