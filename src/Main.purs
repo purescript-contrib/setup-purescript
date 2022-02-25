@@ -5,7 +5,7 @@ import Prelude
 import Affjax (printError)
 import Affjax as AX
 import Affjax.ResponseFormat as RF
-import Control.Monad.Except.Trans (ExceptT(..), mapExceptT, runExceptT)
+import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
@@ -21,7 +21,7 @@ import Setup.UpdateVersions (updateVersions)
 main :: Effect Unit
 main = runAff_ go $ runExceptT do
   versionsJson <- ExceptT $ map (lmap (error <<< printError)) $ AX.get RF.json versionsFile
-  tools <- mapExceptT liftEffect $ constructBuildPlan versionsJson.body
+  tools <- constructBuildPlan versionsJson.body
   liftEffect $ Core.info "Constructed build plan."
   traverse_ getTool tools
   liftEffect $ Core.info "Fetched tools."

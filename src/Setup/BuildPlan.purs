@@ -2,7 +2,7 @@ module Setup.BuildPlan (constructBuildPlan, BuildPlan) where
 
 import Prelude
 
-import Control.Monad.Except.Trans (ExceptT)
+import Control.Monad.Except.Trans (ExceptT, mapExceptT)
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Array as Array
@@ -13,8 +13,7 @@ import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
 import Data.Version (Version)
 import Data.Version as Version
-import Effect (Effect)
-import Effect.Aff (error, throwError)
+import Effect.Aff (Aff, error, throwError)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import GitHub.Actions.Core as Core
@@ -29,16 +28,16 @@ import Text.Parsing.Parser as ParseError
 type BuildPlan = Array { tool :: Tool, version :: Version }
 
 -- | Construct the list of tools that sholud be downloaded and cached by the action
-constructBuildPlan :: Json -> ExceptT Error Effect BuildPlan
+constructBuildPlan :: Json -> ExceptT Error Aff BuildPlan
 constructBuildPlan json = map Array.catMaybes $ traverse (resolve json) Tool.allTools
 
 -- | The parsed value of an input field that specifies a version
 data VersionField = Latest | Exact Version
 
 -- | Attempt to read the value of an input specifying a tool version
-getVersionField :: Key -> ExceptT Error Effect (Maybe VersionField)
+getVersionField :: Key -> ExceptT Error Aff (Maybe VersionField)
 getVersionField key = do
-  value <- Core.getInput' (Key.toString key)
+  value <- mapExceptT liftEffect $ Core.getInput' (Key.toString key)
   case value of
     "" ->
       pure Nothing
@@ -53,7 +52,7 @@ getVersionField key = do
 
 -- | Resolve the exact version to provide for a tool in the environment, based
 -- | on the action.yml file.
-resolve :: Json -> Tool -> ExceptT Error Effect (Maybe { tool :: Tool, version :: Version })
+resolve :: Json -> Tool -> ExceptT Error Aff (Maybe { tool :: Tool, version :: Version })
 resolve versionsContents tool = do
   let key = Key.fromTool tool
   field <- getVersionField key
