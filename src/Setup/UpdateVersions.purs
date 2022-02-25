@@ -1,6 +1,10 @@
 -- | The source used to fetch and update the latest versions in the versions.json
 -- | file, which records the latest version of each tool.
-module Setup.UpdateVersions (updateVersions) where
+module Setup.UpdateVersions
+  ( updateVersions
+  , fetchFromGitHubReleases
+  , ReleaseType(..)
+  ) where
 
 import Prelude
 
