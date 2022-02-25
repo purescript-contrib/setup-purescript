@@ -34,6 +34,7 @@ import Node.FS.Sync (writeTextFile)
 import Node.Path (FilePath)
 import Setup.Data.Tool (Tool(..))
 import Setup.Data.Tool as Tool
+import Text.Parsing.Parser (ParseError)
 
 data ReleaseType
   = OnlyPreReleases Version
@@ -71,124 +72,126 @@ fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
   Psa -> fetchFromGitHubTags
   PursTidy -> fetchFromGitHubTags
   Zephyr -> fetchFromGitHubReleases OnlyRealReleases
-  where
-  -- TODO: These functions really ought to be in ExceptT to avoid all the
-  -- nested branches.
-  fetchFromGitHubReleases :: ReleaseType -> Tool.ToolRepository -> Aff Version
-  fetchFromGitHubReleases releaseType repo = recover do
-    page <- liftEffect (Ref.new 1)
-    let
-      releaseFilter = case releaseType of
-        OnlyRealReleases ->
-          not <<< Version.isPreRelease
-        OnlyPreReleases expectedV -> do
-          let
-            equating f a b = (f a) == (f b)
-            majorMinorMatch v = equating Version.major expectedV v && equating Version.minor expectedV v
-          majorMinorMatch && Version.isPreRelease
-    untilJust do
-      versions <- liftEffect (Ref.read page) >>= toolVersions repo
-      case versions of
-        Just versions' -> do
-          let version = Array.find releaseFilter versions'
-          when (isNothing version) do
-            liftEffect $ void $ Ref.modify (_ + 1) page
-          pure version
 
-        Nothing ->
-          case releaseType of
-            OnlyRealReleases ->
-              throwError $ error "Could not find version that is not a pre-release version"
-            OnlyPreReleases v ->
-              throwError $ error $ "Could not find a pre-release version of version, " <> showVersion v
+-- TODO: These functions really ought to be in ExceptT to avoid all the
+-- nested branches.
+fetchFromGitHubReleases :: ReleaseType -> Tool.ToolRepository -> Aff Version
+fetchFromGitHubReleases releaseType repo = recover do
+  page <- liftEffect (Ref.new 1)
+  let
+    releaseFilter = case releaseType of
+      OnlyRealReleases ->
+        not <<< Version.isPreRelease
+      OnlyPreReleases expectedV -> do
+        let
+          equating f a b = (f a) == (f b)
+          majorMinorMatch v = equating Version.major expectedV v && equating Version.minor expectedV v
+        majorMinorMatch && Version.isPreRelease
+  untilJust do
+    versions <- liftEffect (Ref.read page) >>= toolVersions repo
+    case versions of
+      Just versions' -> do
+        let version = Array.find releaseFilter versions'
+        when (isNothing version) do
+          liftEffect $ void $ Ref.modify (_ + 1) page
+        pure version
 
-  toolVersions :: Tool.ToolRepository -> Int -> Aff (Maybe (Array Version))
-  toolVersions repo page = do
-    let
-      url =
-        "https://api.github.com/repos/"
-          <> repo.owner
-          <> "/"
-          <> repo.name
-          <> "/releases?per_page=10&page="
-          <> show page
+      Nothing ->
+        case releaseType of
+          OnlyRealReleases ->
+            throwError $ error "Could not find version that is not a pre-release version"
+          OnlyPreReleases v ->
+            throwError $ error $ "Could not find a pre-release version of version, " <> showVersion v
 
-    AX.get RF.json url >>= case _ of
-      Left err -> throwError (error $ AX.printError err)
-      Right { body } -> case decodeJson body of
-        Left e -> do
-          throwError $ error
-            $ fold
-                [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
-                , printJsonDecodeError e
-                , stringifyWithIndent 2 body
-                ]
-        Right [] -> pure Nothing
-        Right objects ->
-          Just
-            <$> Array.catMaybes
-            <$> for objects \obj ->
-              case obj .: "tag_name" of
-                Left e ->
-                  throwError $ error $ fold
-                    [ "Failed to get tag from GitHub response: "
-                    , printJsonDecodeError e
-                    ]
-                Right tagName ->
-                  case tagStrToVersion tagName of
-                    Left _ -> do
-                      liftEffect $ warning $ fold
-                        [ "Got invalid version"
-                        , tagName
-                        , " from "
-                        , repo.name
+toolVersions :: Tool.ToolRepository -> Int -> Aff (Maybe (Array Version))
+toolVersions repo page = do
+  let
+    url =
+      "https://api.github.com/repos/"
+        <> repo.owner
+        <> "/"
+        <> repo.name
+        <> "/releases?per_page=10&page="
+        <> show page
+
+  AX.get RF.json url >>= case _ of
+    Left err -> throwError (error $ AX.printError err)
+    Right { body } -> case decodeJson body of
+      Left e -> do
+        throwError $ error
+          $ fold
+              [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+              , printJsonDecodeError e
+              , stringifyWithIndent 2 body
+              ]
+      Right [] -> pure Nothing
+      Right objects ->
+        Just
+          <$> Array.catMaybes
+          <$> for objects \obj ->
+            case obj .: "tag_name" of
+              Left e ->
+                throwError $ error $ fold
+                  [ "Failed to get tag from GitHub response: "
+                  , printJsonDecodeError e
+                  ]
+              Right tagName ->
+                case tagStrToVersion tagName of
+                  Left _ -> do
+                    liftEffect $ warning $ fold
+                      [ "Got invalid version"
+                      , tagName
+                      , " from "
+                      , repo.name
+                      ]
+                    pure Nothing
+                  Right version -> case obj .: "draft" of
+                    Left e ->
+                      throwError $ error $ fold
+                        [ "Failed to get draft from GitHub response: "
+                        , printJsonDecodeError e
                         ]
-                      pure Nothing
-                    Right version -> case obj .: "draft" of
-                      Left e ->
-                        throwError $ error $ fold
-                          [ "Failed to get draft from GitHub response: "
-                          , printJsonDecodeError e
-                          ]
-                      Right isDraft ->
-                        pure
-                          if isDraft then Nothing
-                          else Just version
+                    Right isDraft ->
+                      pure
+                        if isDraft then Nothing
+                        else Just version
 
-  tagStrToVersion tagStr =
-    tagStr
-      # String.stripPrefix (String.Pattern "v")
-      # fromMaybe tagStr
-      # Version.parseVersion
+tagStrToVersion :: String -> Either ParseError Version
+tagStrToVersion tagStr =
+  tagStr
+    # String.stripPrefix (String.Pattern "v")
+    # fromMaybe tagStr
+    # Version.parseVersion
 
-  -- If a tool doesn't use GitHub releases and instead only tags versions, then
-  -- we have to fetch the tags, parse them as appropriate versions, and then sort
-  -- them according to their semantic version to get the latest one.
-  fetchFromGitHubTags repo = recover do
-    let url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
+-- If a tool doesn't use GitHub releases and instead only tags versions, then
+-- we have to fetch the tags, parse them as appropriate versions, and then sort
+-- them according to their semantic version to get the latest one.
+fetchFromGitHubTags :: Tool.ToolRepository -> Aff Version
+fetchFromGitHubTags repo = recover do
+  let url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
 
-    AX.get RF.json url >>= case _ of
-      Left err -> do
-        throwError (error $ AX.printError err)
+  AX.get RF.json url >>= case _ of
+    Left err -> do
+      throwError (error $ AX.printError err)
 
-      Right { body } -> case traverse (_ .: "name") =<< decodeJson body of
-        Left e -> do
-          throwError $ error $ fold
-            [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
-            , printJsonDecodeError e
-            , stringifyWithIndent 2 body
-            ]
+    Right { body } -> case traverse (_ .: "name") =<< decodeJson body of
+      Left e -> do
+        throwError $ error $ fold
+          [ "Failed to decode GitHub response. This is most likely due to a timeout.\n\n"
+          , printJsonDecodeError e
+          , stringifyWithIndent 2 body
+          ]
 
-        Right arr -> do
-          let
-            tags = Array.mapMaybe (tagStrToVersion >>> hush) arr
+      Right arr -> do
+        let
+          tags = Array.mapMaybe (tagStrToVersion >>> hush) arr
 
-          case maximum tags of
-            Nothing ->
-              throwError $ error "Could not download latest release version."
+        case maximum tags of
+          Nothing ->
+            throwError $ error "Could not download latest release version."
 
-            Just v ->
-              pure v
+          Just v ->
+            pure v
 
 -- Attempt to recover from a failed request by re-attempting according to an
 -- exponential backoff strategy.
