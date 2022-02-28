@@ -23,7 +23,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.String as String
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
-import Data.Version (Version, showVersion)
+import Data.Version (Version)
 import Data.Version as Version
 import Effect (Effect)
 import Effect.Aff (Aff, Error, Milliseconds(..), delay, error, throwError)
@@ -41,8 +41,8 @@ import Setup.Data.Tool as Tool
 import Text.Parsing.Parser (ParseError)
 
 data ReleaseType
-  = OnlyPreReleases Version
-  | OnlyRealReleases
+  = AnyRelease
+  | RealRelease
 
 derive instance Eq ReleaseType
 
@@ -71,11 +71,11 @@ updateVersions = do
 -- | releases, falls back to the highest valid semantic version tag for the tool.
 fetchLatestReleaseVersion :: Tool -> Aff Version
 fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
-  PureScript -> fetchFromGitHubReleases OnlyRealReleases
-  Spago -> fetchFromGitHubReleases OnlyRealReleases
+  PureScript -> fetchFromGitHubReleases RealRelease
+  Spago -> fetchFromGitHubReleases RealRelease
   Psa -> fetchFromGitHubTags
   PursTidy -> fetchFromGitHubTags
-  Zephyr -> fetchFromGitHubReleases OnlyRealReleases
+  Zephyr -> fetchFromGitHubReleases RealRelease
 
 -- TODO: These functions really ought to be in ExceptT to avoid all the
 -- nested branches.
@@ -84,13 +84,9 @@ fetchFromGitHubReleases releaseType repo = recover do
   page <- liftEffect (Ref.new 1)
   let
     releaseFilter = case releaseType of
-      OnlyRealReleases ->
+      RealRelease ->
         not <<< Version.isPreRelease
-      OnlyPreReleases expectedV -> do
-        let
-          equating f a b = (f a) == (f b)
-          majorMinorMatch v = equating Version.major expectedV v && equating Version.minor expectedV v
-        majorMinorMatch && Version.isPreRelease
+      AnyRelease -> const true
   untilJust do
     versions <- liftEffect (Ref.read page) >>= toolVersions repo
     case versions of
@@ -102,10 +98,10 @@ fetchFromGitHubReleases releaseType repo = recover do
 
       Nothing ->
         case releaseType of
-          OnlyRealReleases ->
+          RealRelease ->
             throwError $ error "Could not find version that is not a pre-release version"
-          OnlyPreReleases v ->
-            throwError $ error $ "Could not find a pre-release version of version, " <> showVersion v
+          AnyRelease ->
+            throwError $ error $ "Could not find the latest version (pre-release or not)"
 
 toolVersions :: Tool.ToolRepository -> Int -> Aff (Maybe (Array Version))
 toolVersions repo page = do

@@ -10,8 +10,6 @@ import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (fold)
 import Data.Maybe (Maybe(..))
-import Data.String (Pattern(..))
-import Data.String as String
 import Data.Traversable (traverse)
 import Data.Version (Version)
 import Data.Version as Version
@@ -37,8 +35,8 @@ constructBuildPlan json = map Array.catMaybes $ traverse (resolve json) Tool.all
 
 -- | The parsed value of an input field that specifies a version
 data VersionField
-  -- | Pre-releases for versions matching the given version
-  = Unstable Version
+  -- | Lookup the latest release, pre-release or not
+  = Unstable
   -- | Lookup the latest release that is not a pre-release
   | Latest
   -- | Use the given version
@@ -53,26 +51,14 @@ getVersionField key = do
       pure Nothing
     "latest" ->
       pure (pure Latest)
-    val
-      | Just versionStr <- String.stripPrefix (Pattern "unstable-") val -> do
-          if Key.toString key /= "purescript" then do
-            liftEffect $ Core.error $
-              fold [ "Pre-release versions only work for the PureScript tool" ]
-            throwError (error $ fold [ "Could not get version for key ", Key.toString key ])
-          else case Version.parseVersion versionStr of
-            Left msg -> do
-              liftEffect $ Core.error $
-                fold [ "Failed to parse pre-release version ", versionStr ]
-              throwError (error (ParseError.parseErrorMessage msg))
-            Right v -> do
-              pure (pure (Unstable v))
-
-      | otherwise -> case Version.parseVersion val of
-          Left msg -> do
-            liftEffect $ Core.error $ fold [ "Failed to parse version ", val ]
-            throwError (error (ParseError.parseErrorMessage msg))
-          Right version ->
-            pure (pure (Exact version))
+    "unstable" ->
+      pure (pure Unstable)
+    val -> case Version.parseVersion val of
+      Left msg -> do
+        liftEffect $ Core.error $ fold [ "Failed to parse version ", val ]
+        throwError (error (ParseError.parseErrorMessage msg))
+      Right version ->
+        pure (pure (Exact version))
 
 -- | Resolve the exact version to provide for a tool in the environment, based
 -- | on the action.yml file.
@@ -102,8 +88,8 @@ resolve versionsContents tool = do
         Right v -> do
           pure (pure { tool, version: v })
 
-    Just (Unstable v) -> do
+    Just Unstable -> do
       liftEffect do
-        Core.info $ fold [ "Fetching most recent pre-release for ", Tool.name tool, "@", Version.showVersion v ]
-      version <- liftAff $ fetchFromGitHubReleases (OnlyPreReleases v) (Tool.repository tool)
+        Core.info $ fold [ "Fetching most recent version (pre-release or not) for ", Tool.name tool ]
+      version <- liftAff $ fetchFromGitHubReleases AnyRelease (Tool.repository tool)
       pure (pure { tool, version })
