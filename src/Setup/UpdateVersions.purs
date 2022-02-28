@@ -42,7 +42,7 @@ import Text.Parsing.Parser (ParseError)
 
 data ReleaseType
   = AnyRelease
-  | RealRelease
+  | StableRelease
 
 derive instance Eq ReleaseType
 
@@ -71,11 +71,11 @@ updateVersions = do
 -- | releases, falls back to the highest valid semantic version tag for the tool.
 fetchLatestReleaseVersion :: Tool -> Aff Version
 fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
-  PureScript -> fetchFromGitHubReleases RealRelease
-  Spago -> fetchFromGitHubReleases RealRelease
+  PureScript -> fetchFromGitHubReleases StableRelease
+  Spago -> fetchFromGitHubReleases StableRelease
   Psa -> fetchFromGitHubTags
   PursTidy -> fetchFromGitHubTags
-  Zephyr -> fetchFromGitHubReleases RealRelease
+  Zephyr -> fetchFromGitHubReleases StableRelease
 
 -- TODO: These functions really ought to be in ExceptT to avoid all the
 -- nested branches.
@@ -84,7 +84,7 @@ fetchFromGitHubReleases releaseType repo = recover do
   page <- liftEffect (Ref.new 1)
   let
     releaseFilter = case releaseType of
-      RealRelease ->
+      StableRelease ->
         not <<< Version.isPreRelease
       AnyRelease -> const true
   untilJust do
@@ -98,7 +98,7 @@ fetchFromGitHubReleases releaseType repo = recover do
 
       Nothing ->
         case releaseType of
-          RealRelease ->
+          StableRelease ->
             throwError $ error "Could not find version that is not a pre-release version"
           AnyRelease ->
             throwError $ error $ "Could not find the latest version (pre-release or not)"
