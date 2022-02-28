@@ -86,7 +86,8 @@ fetchFromGitHubReleases releaseType repo = recover do
     releaseFilter = case releaseType of
       StableRelease ->
         not <<< Version.isPreRelease
-      AnyRelease -> const true
+      AnyRelease ->
+        const true
   untilJust do
     versions <- liftEffect (Ref.read page) >>= toolVersions repo
     case versions of
