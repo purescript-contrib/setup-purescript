@@ -36,7 +36,12 @@ Other tools are not enabled by default, but you can enable them by specifying th
 
 ### Specify Versions
 
-Each tool can accept a semantic version (only exact versions currently supported) or the string `"latest"`. Tools that are not installed by default must be specified this way to be included in the toolchain.
+Each tool can accept one of the following:
+- a semantic version (only exact versions currently supported)
+- the string `"latest"`, which represents the latest non-prerelease version
+- the string `"unstable"`, which represents the latest version (pre-release or not)
+
+Tools that are not installed by default must be specified this way to be included in the toolchain.
 
 ```yaml
 steps:
