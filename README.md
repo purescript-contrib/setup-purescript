@@ -38,8 +38,8 @@ Other tools are not enabled by default, but you can enable them by specifying th
 
 Each tool can accept one of the following:
 - a semantic version (only exact versions currently supported)
-- the string `"latest"`, which represents the latest non-prerelease version
-- the string `"unstable"`, which represents the latest version (pre-release or not)
+- the string `"latest"`, which represents the latest version that uses major, minor, and patch, but will omit versions using pre-release identifiers or build metadata
+- the string `"unstable"`, which represents the latest version no matter what it is (i.e. pre-release identifiers and build metadata are not considered).
 
 Tools that are not installed by default must be specified this way to be included in the toolchain.
 
