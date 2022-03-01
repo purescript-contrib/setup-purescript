@@ -14,7 +14,6 @@ import Data.Traversable (traverse)
 import Data.Version (Version)
 import Data.Version as Version
 import Effect.Aff (Aff, error, throwError)
-import Effect.Aff.Class (liftAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import GitHub.Actions.Core as Core
@@ -22,7 +21,6 @@ import Setup.Data.Key (Key)
 import Setup.Data.Key as Key
 import Setup.Data.Tool (Tool)
 import Setup.Data.Tool as Tool
-import Setup.UpdateVersions (ReleaseType(..), fetchFromGitHubReleases)
 import Text.Parsing.Parser (parseErrorMessage)
 import Text.Parsing.Parser as ParseError
 
@@ -74,22 +72,22 @@ resolve versionsContents tool = do
       pure (pure { tool, version: v })
 
     Just Latest -> liftEffect do
-      Core.info $ fold [ "Fetching latest tag for ", Tool.name tool ]
+      Core.info $ fold [ "Fetching latest stable tag for ", Tool.name tool ]
+      readVersionFromFile
 
-      let
-        version = lmap printJsonDecodeError $ (_ .: Tool.name tool) =<< decodeJson versionsContents
-        parse = lmap parseErrorMessage <<< Version.parseVersion
+    Just Unstable -> liftEffect do
+      Core.info $ fold [ "Fetching latest tag (pre-release or not) for ", Tool.name tool ]
+      readVersionFromFile
+  where
+  readVersionFromFile = do
+    let
+      version = lmap printJsonDecodeError $ (_ .: Tool.name tool) =<< decodeJson versionsContents
+      parse = lmap parseErrorMessage <<< Version.parseVersion
 
-      case parse =<< version of
-        Left e -> do
-          Core.setFailed $ fold [ "Unable to parse version: ", e ]
-          throwError $ error "Unable to complete fetching version."
+    case parse =<< version of
+      Left e -> do
+        Core.setFailed $ fold [ "Unable to parse version: ", e ]
+        throwError $ error "Unable to complete fetching version."
 
-        Right v -> do
-          pure (pure { tool, version: v })
-
-    Just Unstable -> do
-      liftEffect do
-        Core.info $ fold [ "Fetching most recent version (pre-release or not) for ", Tool.name tool ]
-      version <- liftAff $ fetchFromGitHubReleases AnyRelease (Tool.repository tool)
-      pure (pure { tool, version })
+      Right v -> do
+        pure (pure { tool, version: v })
