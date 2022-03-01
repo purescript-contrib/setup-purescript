@@ -3,18 +3,23 @@ module Setup.Data.Tool where
 import Prelude
 
 import Affjax (URL)
-import Data.Argonaut.Decode (class DecodeJson, JsonDecodeError(..))
+import Data.Argonaut.Core (jsonEmptyObject)
+import Data.Argonaut.Decode (class DecodeJson, JsonDecodeError(..), decodeJson, (.:))
 import Data.Argonaut.Decode.Decoders (decodeString)
-import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Encode (class EncodeJson, (:=), (~>))
 import Data.Argonaut.Encode.Encoders (encodeString)
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Either (Either(..), fromRight')
 import Data.Enum (class Enum, upFromIncluding)
 import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Foldable (elem, fold)
+import Data.FoldableWithIndex (foldlWithIndex)
 import Data.Generic.Rep (class Generic)
 import Data.Map (Map)
+import Data.Map as Map
 import Data.Newtype (class Newtype)
+import Data.Traversable (for)
+import Data.Tuple (Tuple(..))
 import Data.Version (Version, parseVersion)
 import Data.Version as Version
 import Node.Path (FilePath)
@@ -78,8 +83,20 @@ name = case _ of
 newtype ToolMap = ToolMap (Map Tool { latest :: String, unstable :: String })
 
 derive instance Newtype ToolMap _
-derive newtype instance EncodeJson ToolMap
-derive newtype instance DecodeJson ToolMap
+instance EncodeJson ToolMap where
+  encodeJson (ToolMap toolMap) = do
+    foldlWithIndex foldFn jsonEmptyObject toolMap
+    where
+    foldFn tool acc rec = do
+      (name tool) := rec ~> acc
+
+instance DecodeJson ToolMap where
+  decodeJson j = do
+    obj <- decodeJson j
+    keyVals <- for allTools \tool -> do
+      rec <- obj .: name tool
+      pure $ Tuple tool rec
+    pure $ ToolMap $ Map.fromFoldable keyVals
 
 -- | The source repository for a tool (whether on GitHub or Gitlab)
 type ToolRepository = { owner :: String, name :: String }
