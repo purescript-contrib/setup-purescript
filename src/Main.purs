@@ -5,28 +5,40 @@ import Prelude
 import Affjax (printError)
 import Affjax as AX
 import Affjax.ResponseFormat as RF
-import Control.Monad.Except.Trans (ExceptT(..), mapExceptT, runExceptT)
-import Data.Bifunctor (lmap)
+import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
+import Data.Argonaut.Parser (jsonParser)
+import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
 import Data.Foldable (traverse_)
+import Data.Maybe (isJust)
 import Effect (Effect)
 import Effect.Aff (error, launchAff_, runAff_)
 import Effect.Class (liftEffect)
 import Effect.Exception (message)
 import GitHub.Actions.Core as Core
+import Node.Encoding (Encoding(..))
+import Node.FS.Aff as FSA
+import Node.Process as Process
 import Setup.BuildPlan (constructBuildPlan)
+import Setup.Data.VersionFiles (V2FileSchema(..), latestVersion)
 import Setup.GetTool (getTool)
 import Setup.UpdateVersions (updateVersions)
 
 main :: Effect Unit
 main = runAff_ go $ runExceptT do
-  versionsJson <- ExceptT $ map (lmap (error <<< printError)) $ AX.get RF.json versionsFile
-  tools <- mapExceptT liftEffect $ constructBuildPlan versionsJson.body
+  versionsJson <- getVersionsFile
+  tools <- constructBuildPlan versionsJson
   liftEffect $ Core.info "Constructed build plan."
   traverse_ getTool tools
   liftEffect $ Core.info "Fetched tools."
   where
-  versionsFile = "https://raw.githubusercontent.com/purescript-contrib/setup-purescript/main/dist/versions.json"
+  getVersionsFile = ExceptT do
+    let V2FileSchema { localFile, fileUrl } = latestVersion
+    mb <- liftEffect $ Process.lookupEnv "USE_LOCAL_VERSIONS_JSON"
+    if isJust mb then do
+      map (lmap error <<< jsonParser) $ FSA.readTextFile UTF8 localFile
+    else do
+      map (bimap (error <<< printError) _.body) $ AX.get RF.json fileUrl
 
   go res = case join res of
     Left err -> Core.setFailed (message err)

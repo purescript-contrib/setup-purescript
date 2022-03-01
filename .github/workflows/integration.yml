@@ -13,6 +13,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      USE_LOCAL_VERSIONS_JSON: 1
 
     steps:
       - uses: actions/checkout@v2

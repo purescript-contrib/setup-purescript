@@ -3,12 +3,12 @@ module Setup.Data.Tool where
 import Prelude
 
 import Affjax (URL)
+import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Either (fromRight')
 import Data.Enum (class Enum, upFromIncluding)
+import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Foldable (elem, fold)
 import Data.Generic.Rep (class Generic)
-import Data.Bounded.Generic (genericBottom, genericTop)
-import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Version (Version, parseVersion)
 import Data.Version as Version
 import Node.Path (FilePath)
