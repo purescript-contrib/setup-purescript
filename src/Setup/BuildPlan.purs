@@ -4,11 +4,13 @@ import Prelude
 
 import Control.Monad.Except.Trans (ExceptT, mapExceptT)
 import Data.Argonaut.Core (Json)
-import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
+import Data.Argonaut.Decode (decodeJson, printJsonDecodeError)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
+import Data.Either (Either(..), note)
 import Data.Foldable (fold)
+import Data.Map (Map)
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
 import Data.Version (Version)
@@ -73,21 +75,25 @@ resolve versionsContents tool = do
 
     Just Latest -> liftEffect do
       Core.info $ fold [ "Fetching latest stable tag for ", Tool.name tool ]
-      readVersionFromFile
+      readVersionFromFile "latest" _.latest
 
     Just Unstable -> liftEffect do
       Core.info $ fold [ "Fetching latest tag (pre-release or not) for ", Tool.name tool ]
-      readVersionFromFile
+      readVersionFromFile "unstable" _.unstable
   where
-  readVersionFromFile = do
+  readVersionFromFile fieldName fieldSelector = do
     let
-      version = lmap printJsonDecodeError $ (_ .: Tool.name tool) =<< decodeJson versionsContents
-      parse = lmap parseErrorMessage <<< Version.parseVersion
+      decodeVersion = do
+        toolMap :: ToolMap <- lmap printJsonDecodeError $ decodeJson versionsContents
+        rec <- note (fold [ "Tool \"", Tool.name tool, "\" not found." ]) $ Map.lookup tool toolMap
+        lmap parseErrorMessage $ Version.parseVersion $ fieldSelector rec
 
-    case parse =<< version of
+    case decodeVersion of
       Left e -> do
-        Core.setFailed $ fold [ "Unable to parse version: ", e ]
+        Core.setFailed $ fold [ "Unable to parse version for field '", fieldName, "': ", e ]
         throwError $ error "Unable to complete fetching version."
 
       Right v -> do
         pure (pure { tool, version: v })
+
+type ToolMap = Map Tool { latest :: String, unstable :: String }
