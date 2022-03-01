@@ -4,10 +4,8 @@ import Prelude
 
 import Control.Monad.Except.Trans (ExceptT, mapExceptT)
 import Data.Argonaut.Core (Json)
-import Data.Argonaut.Decode (decodeJson, printJsonDecodeError)
 import Data.Array as Array
-import Data.Bifunctor (lmap)
-import Data.Either (Either(..), note)
+import Data.Either (Either(..))
 import Data.Foldable (fold)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -20,9 +18,9 @@ import Effect.Exception (Error)
 import GitHub.Actions.Core as Core
 import Setup.Data.Key (Key)
 import Setup.Data.Key as Key
-import Setup.Data.Tool (Tool, ToolMap(..))
+import Setup.Data.Tool (Tool)
 import Setup.Data.Tool as Tool
-import Text.Parsing.Parser (parseErrorMessage)
+import Setup.Data.VersionFiles (V2FileSchema(..), latestVersion, printV2FileError)
 import Text.Parsing.Parser as ParseError
 
 -- | The list of tools that should be downloaded and cached by the action
@@ -81,16 +79,25 @@ resolve versionsContents tool = do
       readVersionFromFile "unstable" _.unstable
   where
   readVersionFromFile fieldName fieldSelector = do
-    let
-      decodeVersion = do
-        ToolMap toolMap <- lmap printJsonDecodeError $ decodeJson versionsContents
-        rec <- note (fold [ "Tool \"", Tool.name tool, "\" not found." ]) $ Map.lookup tool toolMap
-        lmap parseErrorMessage $ Version.parseVersion $ fieldSelector rec
-
-    case decodeVersion of
-      Left e -> do
-        Core.setFailed $ fold [ "Unable to parse version for field '", fieldName, "': ", e ]
+    let V2FileSchema { decode } = latestVersion
+    case decode versionsContents of
+      Left err -> do
+        Core.setFailed $ fold
+          [ "Unable to parse version for field '"
+          , fieldName
+          , "': "
+          , printV2FileError err
+          ]
         throwError $ error "Unable to complete fetching version."
 
-      Right v -> do
-        pure (pure { tool, version: v })
+      Right toolMap
+        | Just v <- Map.lookup tool toolMap -> do
+            pure (pure { tool, version: fieldSelector v })
+        | otherwise -> do
+            Core.setFailed $ fold
+              [ "Unable to find version for tool '"
+              , Tool.name tool
+              , "'. Tools found were: "
+              , show $ map Tool.name $ Array.fromFoldable $ Map.keys toolMap
+              ]
+            throwError $ error "Unable to complete fetching version."

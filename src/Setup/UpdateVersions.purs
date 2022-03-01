@@ -10,7 +10,6 @@ import Control.Alt ((<|>))
 import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Data.Argonaut.Core (Json, stringifyWithIndent)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
-import Data.Argonaut.Encode (encodeJson)
 import Data.Array as Array
 import Data.Either (Either(..), hush)
 import Data.Foldable (fold, maximum)
@@ -33,8 +32,9 @@ import Math (pow)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (writeTextFile)
 import Node.Path (FilePath)
-import Setup.Data.Tool (Tool(..), ToolMap(..))
+import Setup.Data.Tool (Tool(..))
 import Setup.Data.Tool as Tool
+import Setup.Data.VersionFiles (V1FileSchema(..), V2FileSchema(..), version1, version2)
 import Text.Parsing.Parser (ParseError)
 
 -- | Write the latest version of each supported tool
@@ -42,19 +42,27 @@ updateVersions :: Aff Unit
 updateVersions = do
   versions <- for Tool.allTools \tool -> do
     delay (Milliseconds 500.0)
-    { latest, unstable } <- fetchLatestReleaseVersion tool
-    pure $ Tuple tool
-      { latest: Version.showVersion latest
-      , unstable: Version.showVersion unstable
-      }
+    versionRec <- fetchLatestReleaseVersion tool
+    pure $ Tuple tool versionRec
 
-  liftEffect $ writeVersionsFile $ encodeJson $ ToolMap $ Map.fromFoldable versions
+  updateV1File versions
+  updateV2File versions
   where
-  versionsFilePath :: FilePath
-  versionsFilePath = "./dist/versions.json"
+  updateV1File versions = liftEffect do
+    let V1FileSchema { localFile, encode } = version1
+    writeVersionsFile localFile
+      $ encode
+      $ Map.fromFoldable
+      $ map (map _.latest) versions
 
-  writeVersionsFile :: Json -> Effect Unit
-  writeVersionsFile = writeTextFile UTF8 versionsFilePath <<< (_ <> "\n") <<< stringifyWithIndent 2
+  updateV2File versions = liftEffect do
+    let V2FileSchema { localFile, encode } = version2
+    writeVersionsFile localFile
+      $ encode
+      $ Map.fromFoldable versions
+
+  writeVersionsFile :: FilePath -> Json -> Effect Unit
+  writeVersionsFile path = writeTextFile UTF8 path <<< (_ <> "\n") <<< stringifyWithIndent 2
 
 -- | Find the latest release version for a given tool. Prefers explicit releases
 -- | as listed in GitHub releases, but for tools which don't support GitHub

@@ -20,6 +20,7 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FSA
 import Node.Process as Process
 import Setup.BuildPlan (constructBuildPlan)
+import Setup.Data.VersionFiles (V2FileSchema(..), latestVersion)
 import Setup.GetTool (getTool)
 import Setup.UpdateVersions (updateVersions)
 
@@ -32,13 +33,12 @@ main = runAff_ go $ runExceptT do
   liftEffect $ Core.info "Fetched tools."
   where
   getVersionsFile = ExceptT do
+    let V2FileSchema { localFile, fileUrl } = latestVersion
     mb <- liftEffect $ Process.lookupEnv "USE_LOCAL_VERSIONS_JSON"
     if isJust mb then do
-      map (lmap error <<< jsonParser) $ FSA.readTextFile UTF8 "./dist/versions.json"
+      map (lmap error <<< jsonParser) $ FSA.readTextFile UTF8 localFile
     else do
-      map (bimap (error <<< printError) _.body) $ AX.get RF.json versionsFile
-
-  versionsFile = "https://raw.githubusercontent.com/purescript-contrib/setup-purescript/main/dist/versions.json"
+      map (bimap (error <<< printError) _.body) $ AX.get RF.json fileUrl
 
   go res = case join res of
     Left err -> Core.setFailed (message err)

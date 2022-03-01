@@ -4,12 +4,10 @@ import Prelude
 
 import Affjax (URL)
 import Data.Argonaut.Core (jsonEmptyObject)
-import Data.Argonaut.Decode (class DecodeJson, JsonDecodeError(..), decodeJson, (.:))
-import Data.Argonaut.Decode.Decoders (decodeString)
+import Data.Argonaut.Decode (class DecodeJson, decodeJson, (.:))
 import Data.Argonaut.Encode (class EncodeJson, (:=), (~>))
-import Data.Argonaut.Encode.Encoders (encodeString)
 import Data.Bounded.Generic (genericBottom, genericTop)
-import Data.Either (Either(..), fromRight')
+import Data.Either (fromRight')
 import Data.Enum (class Enum, upFromIncluding)
 import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Foldable (elem, fold)
@@ -37,19 +35,6 @@ data Tool
 derive instance eqTool :: Eq Tool
 derive instance ordTool :: Ord Tool
 derive instance genericTool :: Generic Tool _
-instance EncodeJson Tool where
-  encodeJson = encodeString <<< name
-
-instance DecodeJson Tool where
-  decodeJson j = do
-    str <- decodeString j
-    case str of
-      "purs" -> Right PureScript
-      "spago" -> Right Spago
-      "psa" -> Right Psa
-      "purs-tidy" -> Right PursTidy
-      "zephyr" -> Right Zephyr
-      _ -> Left $ UnexpectedValue j
 
 instance boundedTool :: Bounded Tool where
   bottom = genericBottom
