@@ -59,8 +59,8 @@ derive instance Newtype V2FileSchema _
 
 version2 :: V2FileSchema
 version2 = V2FileSchema
-  { fileUrl: "https://raw.githubusercontent.com/purescript-contrib/setup-purescript/main/dist/versions" <> vSuffix <> ".json"
-  , localFile: "./dist/version" <> vSuffix <> ".json"
+  { fileUrl: "https://raw.githubusercontent.com/purescript-contrib/setup-purescript/main" <> filePath
+  , localFile: "." <> filePath
   , encode: foldlWithIndex encodeFoldFn jsonEmptyObject
   , decode: \j -> do
       obj :: Object Json <- lmap JsonCodecError $ decodeJson j
@@ -75,7 +75,7 @@ version2 = V2FileSchema
       pure $ Map.fromFoldable keyVals
   }
   where
-  vSuffix = "-v2"
+  filePath = "/dist/versions-v2.json"
   encodeFoldFn tool acc { latest, unstable }
     | Just toolStr <- toolToMbString tool = do
         let rec = { latest: Version.showVersion latest, unstable: Version.showVersion unstable }
