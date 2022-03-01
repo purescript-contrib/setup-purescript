@@ -16,6 +16,7 @@
   , "foreign-object"
   , "github-actions-toolkit"
   , "integers"
+  , "lists"
   , "math"
   , "maybe"
   , "newtype"
