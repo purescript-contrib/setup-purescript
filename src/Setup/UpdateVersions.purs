@@ -1,16 +1,13 @@
 -- | The source used to fetch and update the latest versions in the versions.json
 -- | file, which records the latest version of each tool.
-module Setup.UpdateVersions
-  ( updateVersions
-  , fetchFromGitHubReleases
-  , ReleaseType(..)
-  ) where
+module Setup.UpdateVersions (updateVersions) where
 
 import Prelude
 
 import Affjax as AX
 import Affjax.ResponseFormat as RF
-import Control.Monad.Rec.Class (untilJust)
+import Control.Alt ((<|>))
+import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Data.Argonaut.Core (Json, stringifyWithIndent)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
 import Data.Argonaut.Encode (encodeJson)
@@ -19,7 +16,7 @@ import Data.Either (Either(..), hush)
 import Data.Foldable (fold, maximum)
 import Data.Int (toNumber)
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as String
 import Data.Traversable (for, traverse)
 import Data.Tuple (Tuple(..))
@@ -40,21 +37,15 @@ import Setup.Data.Tool (Tool(..), ToolMap(..))
 import Setup.Data.Tool as Tool
 import Text.Parsing.Parser (ParseError)
 
-data ReleaseType
-  = AnyRelease
-  | StableRelease
-
-derive instance Eq ReleaseType
-
 -- | Write the latest version of each supported tool
 updateVersions :: Aff Unit
 updateVersions = do
   versions <- for Tool.allTools \tool -> do
     delay (Milliseconds 500.0)
-    version <- fetchLatestReleaseVersion tool
+    { latest, unstable } <- fetchLatestReleaseVersion tool
     pure $ Tuple tool
-      { latest: Version.showVersion version
-      , unstable: Version.showVersion version
+      { latest: Version.showVersion latest
+      , unstable: Version.showVersion unstable
       }
 
   liftEffect $ writeVersionsFile $ encodeJson $ ToolMap $ Map.fromFoldable versions
@@ -68,40 +59,48 @@ updateVersions = do
 -- | Find the latest release version for a given tool. Prefers explicit releases
 -- | as listed in GitHub releases, but for tools which don't support GitHub
 -- | releases, falls back to the highest valid semantic version tag for the tool.
-fetchLatestReleaseVersion :: Tool -> Aff Version
+fetchLatestReleaseVersion :: Tool -> Aff { latest :: Version, unstable :: Version }
 fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
-  PureScript -> fetchFromGitHubReleases StableRelease
-  Spago -> fetchFromGitHubReleases StableRelease
+  PureScript -> fetchFromGitHubReleases
+  Spago -> fetchFromGitHubReleases
   Psa -> fetchFromGitHubTags
   PursTidy -> fetchFromGitHubTags
-  Zephyr -> fetchFromGitHubReleases StableRelease
+  Zephyr -> fetchFromGitHubReleases
 
 -- TODO: These functions really ought to be in ExceptT to avoid all the
 -- nested branches.
-fetchFromGitHubReleases :: ReleaseType -> Tool.ToolRepository -> Aff Version
-fetchFromGitHubReleases releaseType repo = recover do
+fetchFromGitHubReleases :: Tool.ToolRepository -> Aff { latest :: Version, unstable :: Version }
+fetchFromGitHubReleases repo = recover do
   page <- liftEffect (Ref.new 1)
-  let
-    releaseFilter = case releaseType of
-      StableRelease ->
-        not <<< Version.isPreRelease
-      AnyRelease ->
-        const true
-  untilJust do
+  untilBothVersionsFound \firstUnstableVersion -> do
     versions <- liftEffect (Ref.read page) >>= toolVersions repo
     case versions of
       Just versions' -> do
-        let version = Array.find releaseFilter versions'
-        when (isNothing version) do
-          liftEffect $ void $ Ref.modify (_ + 1) page
-        pure version
+        let
+          unstable = firstUnstableVersion <|> Array.head versions'
+          latest = Array.find (not <<< Version.isPreRelease) versions'
+        case latest of
+          Nothing -> do
+            liftEffect $ void $ Ref.modify (_ + 1) page
+            pure $ Left unstable
+          Just v -> do
+            pure $ Right
+              { latest: v
+              , unstable: fromMaybe v unstable
+              }
 
       Nothing ->
-        case releaseType of
-          StableRelease ->
+        case firstUnstableVersion of
+          Nothing ->
+            throwError $ error "Could not find a pre-release or stable version"
+          Just _ ->
             throwError $ error "Could not find version that is not a pre-release version"
-          AnyRelease ->
-            throwError $ error $ "Could not find the latest version (pre-release or not)"
+  where
+  -- based on `untilJust`
+  untilBothVersionsFound :: forall a b m. MonadRec m => (Maybe a -> m (Either (Maybe a) b)) -> m b
+  untilBothVersionsFound f = Nothing # tailRecM \mb1 -> f mb1 <#> case _ of
+    Left mb2 -> Loop mb2
+    Right x -> Done x
 
 toolVersions :: Tool.ToolRepository -> Int -> Aff (Maybe (Array Version))
 toolVersions repo page = do
@@ -166,7 +165,7 @@ tagStrToVersion tagStr =
 -- If a tool doesn't use GitHub releases and instead only tags versions, then
 -- we have to fetch the tags, parse them as appropriate versions, and then sort
 -- them according to their semantic version to get the latest one.
-fetchFromGitHubTags :: Tool.ToolRepository -> Aff Version
+fetchFromGitHubTags :: Tool.ToolRepository -> Aff { latest :: Version, unstable :: Version }
 fetchFromGitHubTags repo = recover do
   let url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
 
@@ -191,7 +190,7 @@ fetchFromGitHubTags repo = recover do
             throwError $ error "Could not download latest release version."
 
           Just v ->
-            pure v
+            pure { latest: v, unstable: v }
 
 -- Attempt to recover from a failed request by re-attempting according to an
 -- exponential backoff strategy.
