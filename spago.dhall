@@ -13,6 +13,7 @@
   , "enums"
   , "exceptions"
   , "foldable-traversable"
+  , "foreign-object"
   , "github-actions-toolkit"
   , "integers"
   , "math"
