@@ -9,7 +9,6 @@ import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), note)
 import Data.Foldable (fold)
-import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
@@ -21,7 +20,7 @@ import Effect.Exception (Error)
 import GitHub.Actions.Core as Core
 import Setup.Data.Key (Key)
 import Setup.Data.Key as Key
-import Setup.Data.Tool (Tool)
+import Setup.Data.Tool (Tool, ToolMap(..))
 import Setup.Data.Tool as Tool
 import Text.Parsing.Parser (parseErrorMessage)
 import Text.Parsing.Parser as ParseError
@@ -84,7 +83,7 @@ resolve versionsContents tool = do
   readVersionFromFile fieldName fieldSelector = do
     let
       decodeVersion = do
-        toolMap :: ToolMap <- lmap printJsonDecodeError $ decodeJson versionsContents
+        ToolMap toolMap <- lmap printJsonDecodeError $ decodeJson versionsContents
         rec <- note (fold [ "Tool \"", Tool.name tool, "\" not found." ]) $ Map.lookup tool toolMap
         lmap parseErrorMessage $ Version.parseVersion $ fieldSelector rec
 
@@ -95,5 +94,3 @@ resolve versionsContents tool = do
 
       Right v -> do
         pure (pure { tool, version: v })
-
-type ToolMap = Map Tool { latest :: String, unstable :: String }

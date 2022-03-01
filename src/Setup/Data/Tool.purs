@@ -3,12 +3,18 @@ module Setup.Data.Tool where
 import Prelude
 
 import Affjax (URL)
-import Data.Either (fromRight')
+import Data.Argonaut.Decode (class DecodeJson, JsonDecodeError(..))
+import Data.Argonaut.Decode.Decoders (decodeString)
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Encode.Encoders (encodeString)
+import Data.Bounded.Generic (genericBottom, genericTop)
+import Data.Either (Either(..), fromRight')
 import Data.Enum (class Enum, upFromIncluding)
+import Data.Enum.Generic (genericPred, genericSucc)
 import Data.Foldable (elem, fold)
 import Data.Generic.Rep (class Generic)
-import Data.Bounded.Generic (genericBottom, genericTop)
-import Data.Enum.Generic (genericPred, genericSucc)
+import Data.Map (Map)
+import Data.Newtype (class Newtype)
 import Data.Version (Version, parseVersion)
 import Data.Version as Version
 import Node.Path (FilePath)
@@ -26,6 +32,19 @@ data Tool
 derive instance eqTool :: Eq Tool
 derive instance ordTool :: Ord Tool
 derive instance genericTool :: Generic Tool _
+instance EncodeJson Tool where
+  encodeJson = encodeString <<< name
+
+instance DecodeJson Tool where
+  decodeJson j = do
+    str <- decodeString j
+    case str of
+      "purs" -> Right PureScript
+      "spago" -> Right Spago
+      "psa" -> Right Psa
+      "purs-tidy" -> Right PursTidy
+      "zephyr" -> Right Zephyr
+      _ -> Left $ UnexpectedValue j
 
 instance boundedTool :: Bounded Tool where
   bottom = genericBottom
@@ -54,6 +73,13 @@ name = case _ of
   Psa -> "psa"
   PursTidy -> "purs-tidy"
   Zephyr -> "zephyr"
+
+-- | Intermediate encoding for the `dist/versions.json` file
+newtype ToolMap = ToolMap (Map Tool { latest :: String, unstable :: String })
+
+derive instance Newtype ToolMap _
+derive newtype instance EncodeJson ToolMap
+derive newtype instance DecodeJson ToolMap
 
 -- | The source repository for a tool (whether on GitHub or Gitlab)
 type ToolRepository = { owner :: String, name :: String }

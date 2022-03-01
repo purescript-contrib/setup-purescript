@@ -11,14 +11,14 @@ import Prelude
 import Affjax as AX
 import Affjax.ResponseFormat as RF
 import Control.Monad.Rec.Class (untilJust)
-import Data.Argonaut.Core (Json, jsonEmptyObject, stringifyWithIndent)
+import Data.Argonaut.Core (Json, stringifyWithIndent)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError, (.:))
-import Data.Argonaut.Encode ((:=), (~>))
-import Data.Array (foldl)
+import Data.Argonaut.Encode (encodeJson)
 import Data.Array as Array
 import Data.Either (Either(..), hush)
 import Data.Foldable (fold, maximum)
 import Data.Int (toNumber)
+import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.String as String
 import Data.Traversable (for, traverse)
@@ -36,7 +36,7 @@ import Math (pow)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (writeTextFile)
 import Node.Path (FilePath)
-import Setup.Data.Tool (Tool(..))
+import Setup.Data.Tool (Tool(..), ToolMap(..))
 import Setup.Data.Tool as Tool
 import Text.Parsing.Parser (ParseError)
 
@@ -52,13 +52,12 @@ updateVersions = do
   versions <- for Tool.allTools \tool -> do
     delay (Milliseconds 500.0)
     version <- fetchLatestReleaseVersion tool
-    pure $ Tuple tool version
+    pure $ Tuple tool
+      { latest: Version.showVersion version
+      , unstable: Version.showVersion version
+      }
 
-  let
-    insert obj (Tuple tool version) =
-      Tool.name tool := Version.showVersion version ~> obj
-
-  liftEffect $ writeVersionsFile $ foldl insert jsonEmptyObject versions
+  liftEffect $ writeVersionsFile $ encodeJson $ ToolMap $ Map.fromFoldable versions
   where
   versionsFilePath :: FilePath
   versionsFilePath = "./dist/versions.json"
