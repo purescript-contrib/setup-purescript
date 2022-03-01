@@ -20,6 +20,7 @@
   , "newtype"
   , "node-buffer"
   , "node-fs"
+  , "node-fs-aff"
   , "node-path"
   , "node-process"
   , "ordered-collections"
