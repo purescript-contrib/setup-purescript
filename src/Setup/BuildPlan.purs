@@ -83,7 +83,7 @@ resolve versionsContents tool = do
   readVersionFromFile fieldName fieldSelector = do
     let
       decodeVersion = do
-        ToolMap toolMap <- lmap (\e -> printJsonDecodeError e <> "Json " <> stringify versionsContents) $ decodeJson versionsContents
+        ToolMap toolMap <- lmap printJsonDecodeError $ decodeJson versionsContents
         rec <- note (fold [ "Tool \"", Tool.name tool, "\" not found." ]) $ Map.lookup tool toolMap
         lmap parseErrorMessage $ Version.parseVersion $ fieldSelector rec
 
