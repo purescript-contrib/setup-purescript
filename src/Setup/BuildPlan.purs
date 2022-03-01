@@ -3,7 +3,7 @@ module Setup.BuildPlan (constructBuildPlan, BuildPlan) where
 import Prelude
 
 import Control.Monad.Except.Trans (ExceptT, mapExceptT)
-import Data.Argonaut.Core (Json)
+import Data.Argonaut.Core (Json, stringify)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
@@ -83,7 +83,7 @@ resolve versionsContents tool = do
   readVersionFromFile fieldName fieldSelector = do
     let
       decodeVersion = do
-        ToolMap toolMap <- lmap printJsonDecodeError $ decodeJson versionsContents
+        ToolMap toolMap <- lmap (\e -> printJsonDecodeError e <> "Json " <> stringify versionsContents) $ decodeJson versionsContents
         rec <- note (fold [ "Tool \"", Tool.name tool, "\" not found." ]) $ Map.lookup tool toolMap
         lmap parseErrorMessage $ Version.parseVersion $ fieldSelector rec
 
