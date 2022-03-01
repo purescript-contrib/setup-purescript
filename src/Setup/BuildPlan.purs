@@ -3,7 +3,7 @@ module Setup.BuildPlan (constructBuildPlan, BuildPlan) where
 import Prelude
 
 import Control.Monad.Except.Trans (ExceptT, mapExceptT)
-import Data.Argonaut.Core (Json, stringify)
+import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (decodeJson, printJsonDecodeError)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
