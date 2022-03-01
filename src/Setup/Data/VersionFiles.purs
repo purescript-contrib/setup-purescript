@@ -113,13 +113,14 @@ version1 = V1FileSchema
   }
   where
   encodeFoldFn tool acc version
-    | Just toolStr <- toolToMbString tool =
+    | Just toolStr <- printTool tool =
         toolStr := Version.showVersion version ~> acc
     | otherwise =
         acc
 
-  -- in case we add support for other tools in the future...
-  toolToMbString = case _ of
+  -- We preserve the set of tools that existed at the time this version format was produced;
+  -- if more tools are added, they should map to `Nothing`
+  printTool = case _ of
     PureScript -> Just "purs"
     Spago -> Just "spago"
     Psa -> Just "psa"
