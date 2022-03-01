@@ -1,7 +1,22 @@
 {
-  "purs": "0.14.5",
-  "spago": "0.20.7",
-  "psa": "0.8.2",
-  "purs-tidy": "0.7.0",
-  "zephyr": "0.3.2"
+  "purs": {
+    "unstable": "0.14.7",
+    "latest": "0.14.7"
+  },
+  "spago": {
+    "unstable": "0.20.7",
+    "latest": "0.20.7"
+  },
+  "psa": {
+    "unstable": "0.8.2",
+    "latest": "0.8.2"
+  },
+  "purs-tidy": {
+    "unstable": "0.7.0",
+    "latest": "0.7.0"
+  },
+  "zephyr": {
+    "unstable": "0.5.0-wip2",
+    "latest": "0.3.2"
+  }
 }
