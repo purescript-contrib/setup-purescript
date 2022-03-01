@@ -14,6 +14,7 @@ import Data.Array as Array
 import Data.Either (Either(..), hush)
 import Data.Foldable (fold, maximum)
 import Data.Int (toNumber)
+import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as String
@@ -86,7 +87,8 @@ fetchFromGitHubReleases repo = recover do
       Just versions' -> do
         let
           unstable = firstUnstableVersion <|> Array.head versions'
-          latest = Array.find (not <<< Version.isPreRelease) versions'
+          latest = versions' # Array.find \v ->
+            (not $ Version.isPreRelease v) && (List.null $ Version.buildMetadata v)
         case latest of
           Nothing -> do
             liftEffect $ void $ Ref.modify (_ + 1) page
