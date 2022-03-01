@@ -12,8 +12,8 @@
     "latest": "0.8.2"
   },
   "purs-tidy": {
-    "unstable": "0.7.0",
-    "latest": "0.7.0"
+    "unstable": "0.7.1",
+    "latest": "0.7.1"
   },
   "zephyr": {
     "unstable": "0.5.0-wip2",
