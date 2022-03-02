@@ -2,7 +2,6 @@
 
 [![Integration](https://github.com/thomashoneyman/setup-purescript/workflows/Integration/badge.svg?branch=main)](https://github.com/thomashoneyman/setup-purescript/actions?query=workflow%3AIntegration+branch%3Amain)
 [![Sync Versions](https://github.com/thomashoneyman/setup-purescript/workflows/Sync%20Versions/badge.svg?branch=main)](https://github.com/thomashoneyman/setup-purescript/actions?query=workflow%3A"Sync+Versions"+branch%3Amain)
-[![Maintainer: thomashoneyman](https://img.shields.io/badge/maintainer-thomashoneyman-teal.svg)](http://github.com/thomashoneyman)
 
 A GitHub Action which sets up a PureScript toolchain for CI. Contains the following tools by default:
 
