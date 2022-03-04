@@ -16,7 +16,7 @@
     "latest": "0.7.1"
   },
   "zephyr": {
-    "unstable": "0.5.0-wip2",
-    "latest": "0.3.2"
+    "unstable": "0.4.0",
+    "latest": "0.4.0"
   }
 }
