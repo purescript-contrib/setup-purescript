@@ -11,7 +11,7 @@ A GitHub Action which sets up a PureScript toolchain for CI. Contains the follow
 
 You can also optionally include the following tools:
 
-- The [`purs-tidy` code formatter](https://github.com/natefaubion/purs-tidy)
+- The [`purs-tidy` code formatter](https://github.com/natefaubion/purescript-tidy)
 - The [Zephyr dead code elimination tool](https://github.com/coot/zephyr)
 
 This action is designed to support PureScript tools. Your PureScript project may also depend on tooling and libraries provided by the NPM ecosystem, in which case you will also want to use the [setup-node](https://github.com/actions/setup-node) action.
