@@ -1,6 +1,6 @@
 {
   "purs": {
-    "unstable": "0.15.10",
+    "unstable": "0.15.11-0",
     "latest": "0.15.10"
   },
   "spago": {
