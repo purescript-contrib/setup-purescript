@@ -19,7 +19,7 @@ import Data.Version (Version)
 import Data.Version as Version
 import Foreign.Object (Object)
 import Setup.Data.Tool (Tool(..))
-import Text.Parsing.Parser (ParseError)
+import Parsing (ParseError)
 
 latestVersion :: V2FileSchema
 latestVersion = version2

@@ -21,7 +21,7 @@ import Setup.Data.Key as Key
 import Setup.Data.Tool (Tool)
 import Setup.Data.Tool as Tool
 import Setup.Data.VersionFiles (V2FileSchema(..), latestVersion, printV2FileError)
-import Text.Parsing.Parser as ParseError
+import Parsing as ParseError
 
 -- | The list of tools that should be downloaded and cached by the action
 type BuildPlan = Array { tool :: Tool, version :: Version }

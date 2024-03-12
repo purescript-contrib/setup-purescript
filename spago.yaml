@@ -4,6 +4,7 @@ package:
     - aff
     - aff-retry
     - affjax
+    - affjax-node
     - argonaut-codecs
     - argonaut-core
     - arrays
@@ -15,15 +16,14 @@ package:
     - exceptions
     - foldable-traversable
     - foreign-object
-    # - github-actions-toolkit
+    - github-actions-toolkit
     - integers
     - lists
-    # - math
+    - numbers
     - maybe
     - newtype
     - node-buffer
     - node-fs
-    # - node-fs-aff
     - node-path
     - node-process
     - ordered-collections
@@ -42,4 +42,8 @@ package:
 workspace:
   package_set:
     registry: 50.4.0
-  extra_packages: {}
+  extra_packages:
+    github-actions-toolkit:
+      # git: "https://github.com/purescript-contrib/purescript-github-actions-toolkit.git"
+      git: "https://github.com/srghma/purescript-github-actions-toolkit.git"
+      ref: "main"

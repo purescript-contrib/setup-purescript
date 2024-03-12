@@ -6,6 +6,7 @@ workspace:
         - aff
         - aff-retry
         - affjax
+        - affjax-node
         - argonaut-codecs
         - argonaut-core
         - arrays
@@ -17,6 +18,7 @@ workspace:
         - exceptions
         - foldable-traversable
         - foreign-object
+        - github-actions-toolkit
         - integers
         - lists
         - maybe
@@ -25,6 +27,7 @@ workspace:
         - node-fs
         - node-path
         - node-process
+        - numbers
         - ordered-collections
         - parsing
         - partial
@@ -38,8 +41,10 @@ workspace:
       test_dependencies: []
       build_plan:
         - aff
+        - aff-promise
         - aff-retry
         - affjax
+        - affjax-node
         - argonaut-codecs
         - argonaut-core
         - arraybuffer-types
@@ -62,6 +67,7 @@ workspace:
         - functions
         - functors
         - gen
+        - github-actions-toolkit
         - http-methods
         - identity
         - integers
@@ -593,7 +599,10 @@ workspace:
       yoga-tree: 1.0.0
       z3: 0.0.2
       zipperarray: 2.0.0
-  extra_packages: {}
+  extra_packages:
+    github-actions-toolkit:
+      git: https://github.com/srghma/purescript-github-actions-toolkit.git
+      ref: main
 packages:
   aff:
     type: registry
@@ -617,6 +626,13 @@ packages:
       - tailrec
       - transformers
       - unsafe-coerce
+  aff-promise:
+    type: registry
+    version: 4.0.0
+    integrity: sha256-Kq5EupbUpXeUXx4JqGQE7/RTTz/H6idzWhsocwlEFhM=
+    dependencies:
+      - aff
+      - foreign
   aff-retry:
     type: registry
     version: 2.0.0
@@ -652,6 +668,16 @@ packages:
       - refs
       - unsafe-coerce
       - web-xhr
+  affjax-node:
+    type: registry
+    version: 1.0.0
+    integrity: sha256-NcmRTXJxJzgHuKoLh+36yA8UejkfouYcX3uevT+Trjc=
+    dependencies:
+      - aff
+      - affjax
+      - either
+      - maybe
+      - prelude
   argonaut-codecs:
     type: registry
     version: 9.1.0
@@ -917,6 +943,25 @@ packages:
       - tailrec
       - tuples
       - unfoldable
+  github-actions-toolkit:
+    type: git
+    url: https://github.com/srghma/purescript-github-actions-toolkit.git
+    rev: 5a56f43c2a1a482368fe635ef5342cdd7e07663c
+    dependencies:
+      - aff
+      - aff-promise
+      - control
+      - effect
+      - either
+      - exceptions
+      - foreign-object
+      - maybe
+      - node-buffer
+      - node-path
+      - node-streams
+      - nullable
+      - prelude
+      - transformers
   http-methods:
     type: registry
     version: 6.0.0

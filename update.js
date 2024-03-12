@@ -1,5 +1,3 @@
-"use strict";
+import { update } from './output/index.js'
 
-var Main = require("./output/index");
-
-Main.update();
+update();
