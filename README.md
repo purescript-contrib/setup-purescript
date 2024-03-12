@@ -7,6 +7,7 @@ A GitHub Action which sets up a PureScript toolchain for CI. Contains the follow
 
 - The [PureScript compiler](https://github.com/purescript/purescript)
 - The [Spago package manager and build tool](https://github.com/purescript/spago)
+  - Currently, `setup-purescript` provides [`spago-legacy`](https://github.com/purescript/spago-legacy); see [issue 37](https://github.com/purescript-contrib/setup-purescript/issues/37)
 - The [`psa` error reporting frontend for the compiler](https://github.com/natefaubion/purescript-psa)
 
 You can also optionally include the following tools:
