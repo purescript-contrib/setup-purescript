@@ -69,12 +69,52 @@ updateVersions = do
 -- | as listed in GitHub releases, but for tools which don't support GitHub
 -- | releases, falls back to the highest valid semantic version tag for the tool.
 fetchLatestReleaseVersion :: Tool -> Aff { latest :: Version, unstable :: Version }
-fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
-  PureScript -> fetchFromGitHubReleases
-  Spago -> fetchFromGitHubReleases
-  Psa -> fetchFromGitHubTags
-  PursTidy -> fetchFromGitHubTags
-  Zephyr -> fetchFromGitHubReleases
+fetchLatestReleaseVersion tool = case tool of
+  PureScript -> fetchFromGitHubReleases toolRepository
+  Spago -> fetchFromNpmReleases toolRepository.name
+  Psa -> fetchFromGitHubTags toolRepository
+  PursTidy -> fetchFromGitHubTags toolRepository
+  Zephyr -> fetchFromGitHubReleases toolRepository
+  where
+    toolRepository = Tool.repository tool
+
+type NpmOutput = { "dist-tags" :: { latest :: String, next :: String } }
+
+-- | https://www.npmjs.com/package/spago
+-- | https://www.npmjs.com/package/spago?activeTab=versions
+-- | unstable is 0.21.0
+-- | latest is 0.93.x
+fetchFromNpmReleases :: String -> Aff { latest :: Version, unstable :: Version }
+fetchFromNpmReleases packageName = recover do
+  let url = "https://registry.npmjs.org/" <> packageName
+  Affjax.Node.get Affjax.ResponseFormat.json url >>= case _ of
+    Left err -> throwError (error $ Affjax.Node.printError err)
+    Right { body } -> case decodeJson body of
+      Left e -> do
+        throwError $ error
+          $ fold
+              [ "Failed to decode Npm response. This is most likely due to a timeout.\n\n"
+              , printJsonDecodeError e
+              , stringifyWithIndent 2 body
+              ]
+      Right (npmOutput :: NpmOutput) -> do
+        latest <- strToVersionOrError npmOutput."dist-tags".next
+        -- | unstable <- strToVersionOrError npmOutput."dist-tags".latest
+        pure { latest, unstable: latest }
+
+  where
+    strToVersionOrError :: String -> Aff Version
+    strToVersionOrError tagName =
+      case tagStrToVersion tagName of
+        Left _ ->
+          throwError $ error $ fold
+            [ "Got invalid version"
+            , tagName
+            , " from "
+            , packageName
+            ]
+        Right version -> pure version
+
 
 -- TODO: These functions really ought to be in ExceptT to avoid all the
 -- nested branches.
