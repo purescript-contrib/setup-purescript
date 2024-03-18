@@ -3,8 +3,8 @@ module Main where
 import Prelude
 
 import Affjax (printError)
-import Affjax as AX
-import Affjax.ResponseFormat as RF
+import Affjax.Node as Affjax.Node
+import Affjax.ResponseFormat as Affjax.ResponseFormat
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
 import Data.Argonaut.Parser (jsonParser)
 import Data.Bifunctor (bimap, lmap)
@@ -38,7 +38,7 @@ main = runAff_ go $ runExceptT do
     if isJust mb then do
       map (lmap error <<< jsonParser) $ FSA.readTextFile UTF8 localFile
     else do
-      map (bimap (error <<< printError) _.body) $ AX.get RF.json fileUrl
+      map (bimap (error <<< printError) _.body) $ Affjax.Node.get Affjax.ResponseFormat.json fileUrl
 
   go res = case join res of
     Left err -> Core.setFailed (message err)

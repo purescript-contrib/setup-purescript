@@ -27,7 +27,7 @@ jobs:
       - name: Check spago and purs are installed correctly
         run: |
           purs --version
-          spago version
+          spago --version
 
       - name: Check purs-tidy is installed
         run: |
