@@ -16,7 +16,7 @@ inputs:
   zephyr:
     description: "The Zephyr version to install. Examples: latest, 0.3.2"
 runs:
-  using: "node16"
+  using: "node20"
   main: "dist/index.js"
 branding:
   icon: "download"
