@@ -25,29 +25,24 @@
 
       packages = forAllSystems (system:
         let pkgs = nixpkgsFor.${system}; in {
-          default = pkgs.hello; # your package here
+          # default = pkgs.hello; # your package here
         });
 
       devShells = forAllSystems (system:
         # pkgs now has access to the standard PureScript toolchain
         let pkgs = nixpkgsFor.${system}; in {
           default = pkgs.mkShell {
-            name = "my-purescript-project";
+            name = "setup-purescript";
             inputsFrom = builtins.attrValues self.packages.${system};
             buildInputs = with pkgs; [
-              # watchexec
               purs
               spago-unstable
-              # purs-tidy-bin.purs-tidy-0_10_0
-              # purs-backend-es
-              # nodejs-16_x
-              # nodejs-18_x
               nodejs_latest
             ];
 
             shellHook = ''
-              source <(spago --bash-completion-script `which spago`)
               source <(node --completion-bash)
+              source <(spago --bash-completion-script `which spago`)
             '';
           };
         });
