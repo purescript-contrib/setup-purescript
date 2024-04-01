@@ -25,7 +25,7 @@
 
       packages = forAllSystems (system:
         let pkgs = nixpkgsFor.${system}; in {
-          # default = pkgs.hello; # your package here
+          default = pkgs.hello; # your package here
         });
 
       devShells = forAllSystems (system:

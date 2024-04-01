@@ -80,10 +80,7 @@ fetchLatestReleaseVersion tool = case tool of
 
 type NpmOutput = { "dist-tags" :: { latest :: String, next :: String } }
 
--- | https://www.npmjs.com/package/spago
--- | https://www.npmjs.com/package/spago?activeTab=versions
--- | unstable is 0.21.0
--- | latest is 0.93.x
+-- See all versions - https://www.npmjs.com/package/spago?activeTab=versions
 fetchFromNpmReleases :: String -> Aff { latest :: Version, unstable :: Version }
 fetchFromNpmReleases packageName = recover do
   let url = "https://registry.npmjs.org/" <> packageName
@@ -98,9 +95,9 @@ fetchFromNpmReleases packageName = recover do
               , stringifyWithIndent 2 body
               ]
       Right (npmOutput :: NpmOutput) -> do
-        latest <- strToVersionOrError npmOutput."dist-tags".next
-        -- | unstable <- strToVersionOrError npmOutput."dist-tags".latest
-        pure { latest, unstable: latest }
+        unstable <- strToVersionOrError npmOutput."dist-tags".next -- for example 0.93.x
+        latest <- strToVersionOrError npmOutput."dist-tags".latest -- for example 0.21.0
+        pure { latest, unstable }
 
   where
     strToVersionOrError :: String -> Aff Version
