@@ -76,7 +76,7 @@ fetchLatestReleaseVersion tool = case tool of
   PursTidy -> fetchFromGitHubTags toolRepository
   Zephyr -> fetchFromGitHubReleases toolRepository
   where
-    toolRepository = Tool.repository tool
+  toolRepository = Tool.repository tool
 
 type NpmOutput = { "dist-tags" :: { latest :: String, next :: String } }
 
@@ -100,18 +100,17 @@ fetchFromNpmReleases packageName = recover do
         pure { latest, unstable }
 
   where
-    strToVersionOrError :: String -> Aff Version
-    strToVersionOrError tagName =
-      case tagStrToVersion tagName of
-        Left _ ->
-          throwError $ error $ fold
-            [ "Got invalid version"
-            , tagName
-            , " from "
-            , packageName
-            ]
-        Right version -> pure version
-
+  strToVersionOrError :: String -> Aff Version
+  strToVersionOrError tagName =
+    case tagStrToVersion tagName of
+      Left _ ->
+        throwError $ error $ fold
+          [ "Got invalid version"
+          , tagName
+          , " from "
+          , packageName
+          ]
+      Right version -> pure version
 
 -- TODO: These functions really ought to be in ExceptT to avoid all the
 -- nested branches.
