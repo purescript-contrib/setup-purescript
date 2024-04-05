@@ -19,6 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # We set LF endings so that the Windows environment is consistent with the rest
+      # See here for context: https://github.com/actions/checkout/issues/135
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          git config --global core.longpaths true
+
       - uses: ./ # equivalent to purescript-contrib/setup-purescript@<branch>
         with:
           purs-tidy: "latest"
