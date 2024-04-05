@@ -23,17 +23,16 @@
         purescript = inputs.purescript-overlay.overlays.default;
       };
 
-      packages = forAllSystems (system:
-        let pkgs = nixpkgsFor.${system}; in {
-          default = pkgs.hello; # your package here
-        });
+      # fix
+      # does not provide attribute 'packages.x86_64-linux.default' or 'defaultPackage.x86_64-linux'
+      # on `nix shell`
+      packages = self.devShells;
 
       devShells = forAllSystems (system:
         # pkgs now has access to the standard PureScript toolchain
         let pkgs = nixpkgsFor.${system}; in {
           default = pkgs.mkShell {
             name = "setup-purescript";
-            inputsFrom = builtins.attrValues self.packages.${system};
             buildInputs = with pkgs; [
               purs
               spago-unstable
