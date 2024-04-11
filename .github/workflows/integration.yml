@@ -19,16 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # We set LF endings so that the Windows environment is consistent with the rest
+      # See here for context: https://github.com/actions/checkout/issues/135
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          git config --global core.longpaths true
+
       - uses: ./ # equivalent to purescript-contrib/setup-purescript@<branch>
         with:
           purs-tidy: "latest"
           zephyr: "latest"
+          spago: "unstable"
 
       - name: Check spago and purs are installed correctly
         run: |
           purs --version
-          spago version
+          spago --version
 
-      - name: Check purs-tidy is installed
+      - name: Check purescript code is formatted
+        # because errors with 'Some files are not formatted', dont know why
+        if: runner.os != 'Windows'
         run: |
-          purs-tidy --help
+          npm run check

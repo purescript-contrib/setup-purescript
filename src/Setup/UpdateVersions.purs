@@ -4,8 +4,8 @@ module Setup.UpdateVersions (updateVersions) where
 
 import Prelude
 
-import Affjax as AX
-import Affjax.ResponseFormat as RF
+import Affjax.Node as Affjax.Node
+import Affjax.ResponseFormat as Affjax.ResponseFormat
 import Control.Alt ((<|>))
 import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Data.Argonaut.Core (Json, stringifyWithIndent)
@@ -29,14 +29,14 @@ import Effect.Aff.Retry as Retry
 import Effect.Class (liftEffect)
 import Effect.Ref as Ref
 import GitHub.Actions.Core (warning)
-import Math (pow)
+import Data.Number (pow)
 import Node.Encoding (Encoding(..))
 import Node.FS.Sync (writeTextFile)
 import Node.Path (FilePath)
 import Setup.Data.Tool (Tool(..))
 import Setup.Data.Tool as Tool
 import Setup.Data.VersionFiles (V1FileSchema(..), V2FileSchema(..), version1, version2)
-import Text.Parsing.Parser (ParseError)
+import Parsing (ParseError)
 
 -- | Write the latest version of each supported tool
 updateVersions :: Aff Unit
@@ -69,12 +69,48 @@ updateVersions = do
 -- | as listed in GitHub releases, but for tools which don't support GitHub
 -- | releases, falls back to the highest valid semantic version tag for the tool.
 fetchLatestReleaseVersion :: Tool -> Aff { latest :: Version, unstable :: Version }
-fetchLatestReleaseVersion tool = Tool.repository tool # case tool of
-  PureScript -> fetchFromGitHubReleases
-  Spago -> fetchFromGitHubReleases
-  Psa -> fetchFromGitHubTags
-  PursTidy -> fetchFromGitHubTags
-  Zephyr -> fetchFromGitHubReleases
+fetchLatestReleaseVersion tool = case tool of
+  PureScript -> fetchFromGitHubReleases toolRepository
+  Spago -> fetchFromNpmReleases toolRepository.name
+  Psa -> fetchFromGitHubTags toolRepository
+  PursTidy -> fetchFromGitHubTags toolRepository
+  Zephyr -> fetchFromGitHubReleases toolRepository
+  where
+  toolRepository = Tool.repository tool
+
+type NpmOutput = { "dist-tags" :: { latest :: String, next :: String } }
+
+-- See all versions - https://www.npmjs.com/package/spago?activeTab=versions
+fetchFromNpmReleases :: String -> Aff { latest :: Version, unstable :: Version }
+fetchFromNpmReleases packageName = recover do
+  let url = "https://registry.npmjs.org/" <> packageName
+  Affjax.Node.get Affjax.ResponseFormat.json url >>= case _ of
+    Left err -> throwError (error $ Affjax.Node.printError err)
+    Right { body } -> case decodeJson body of
+      Left e -> do
+        throwError $ error
+          $ fold
+              [ "Failed to decode Npm response. This is most likely due to a timeout.\n\n"
+              , printJsonDecodeError e
+              , stringifyWithIndent 2 body
+              ]
+      Right (npmOutput :: NpmOutput) -> do
+        unstable <- strToVersionOrError npmOutput."dist-tags".next -- for example 0.93.x
+        latest <- strToVersionOrError npmOutput."dist-tags".latest -- for example 0.21.0
+        pure { latest, unstable }
+
+  where
+  strToVersionOrError :: String -> Aff Version
+  strToVersionOrError tagName =
+    case tagStrToVersion tagName of
+      Left _ ->
+        throwError $ error $ fold
+          [ "Got invalid version"
+          , tagName
+          , " from "
+          , packageName
+          ]
+      Right version -> pure version
 
 -- TODO: These functions really ought to be in ExceptT to avoid all the
 -- nested branches.
@@ -123,8 +159,8 @@ toolVersions repo page = do
         <> "/releases?per_page=10&page="
         <> show page
 
-  AX.get RF.json url >>= case _ of
-    Left err -> throwError (error $ AX.printError err)
+  Affjax.Node.get Affjax.ResponseFormat.json url >>= case _ of
+    Left err -> throwError (error $ Affjax.Node.printError err)
     Right { body } -> case decodeJson body of
       Left e -> do
         throwError $ error
@@ -179,9 +215,9 @@ fetchFromGitHubTags :: Tool.ToolRepository -> Aff { latest :: Version, unstable 
 fetchFromGitHubTags repo = recover do
   let url = "https://api.github.com/repos/" <> repo.owner <> "/" <> repo.name <> "/tags"
 
-  AX.get RF.json url >>= case _ of
+  Affjax.Node.get Affjax.ResponseFormat.json url >>= case _ of
     Left err -> do
-      throwError (error $ AX.printError err)
+      throwError (error $ Affjax.Node.printError err)
 
     Right { body } -> case traverse (_ .: "name") =<< decodeJson body of
       Left e -> do

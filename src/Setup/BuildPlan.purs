@@ -21,7 +21,7 @@ import Setup.Data.Key as Key
 import Setup.Data.Tool (Tool)
 import Setup.Data.Tool as Tool
 import Setup.Data.VersionFiles (V2FileSchema(..), latestVersion, printV2FileError)
-import Text.Parsing.Parser as ParseError
+import Parsing as Parsing
 
 -- | The list of tools that should be downloaded and cached by the action
 type BuildPlan = Array { tool :: Tool, version :: Version }
@@ -53,7 +53,7 @@ getVersionField key = do
     val -> case Version.parseVersion val of
       Left msg -> do
         liftEffect $ Core.error $ fold [ "Failed to parse version ", val ]
-        throwError (error (ParseError.parseErrorMessage msg))
+        throwError (error (Parsing.parseErrorMessage msg))
       Right version ->
         pure (pure (Exact version))
 

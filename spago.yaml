@@ -1,0 +1,49 @@
+package:
+  name: setup-purescript
+  dependencies:
+    - aff
+    - aff-retry
+    - affjax
+    - affjax-node
+    - argonaut-codecs
+    - argonaut-core
+    - arrays
+    - bifunctors
+    - control
+    - effect
+    - either
+    - enums
+    - exceptions
+    - foldable-traversable
+    - foreign-object
+    - github-actions-toolkit
+    - integers
+    - lists
+    - numbers
+    - maybe
+    - newtype
+    - node-buffer
+    - node-fs
+    - node-path
+    - node-process
+    - ordered-collections
+    - parsing
+    - partial
+    - prelude
+    - refs
+    - strings
+    - tailrec
+    - transformers
+    - tuples
+    - versions
+  test:
+    main: Test.Main
+    dependencies: []
+workspace:
+  package_set:
+    registry: 50.4.0
+  extra_packages:
+    github-actions-toolkit:
+      # git: "https://github.com/purescript-contrib/purescript-github-actions-toolkit.git"
+      git: "https://github.com/srghma/purescript-github-actions-toolkit.git"
+      ref: "main"
