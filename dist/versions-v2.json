@@ -4,7 +4,7 @@
     "latest": "0.15.15"
   },
   "spago": {
-    "unstable": "0.93.31",
+    "unstable": "0.93.32",
     "latest": "0.21.0"
   },
   "psa": {
