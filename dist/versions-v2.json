@@ -4,7 +4,7 @@
     "latest": "0.15.15"
   },
   "spago": {
-    "unstable": "0.93.41",
+    "unstable": "0.93.43",
     "latest": "0.21.0"
   },
   "psa": {
@@ -12,8 +12,8 @@
     "latest": "0.9.0"
   },
   "purs-tidy": {
-    "unstable": "0.11.0",
-    "latest": "0.11.0"
+    "unstable": "0.11.1",
+    "latest": "0.11.1"
   },
   "zephyr": {
     "unstable": "0.5.2",
