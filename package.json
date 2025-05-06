@@ -25,6 +25,6 @@
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.1",
-    "esbuild": "0.20.1"
+    "esbuild": "0.25.0"
   }
 }
