@@ -40,10 +40,9 @@ package:
     main: Test.Main
     dependencies: []
 workspace:
-  package_set:
+  packageSet:
     registry: 50.4.0
-  extra_packages:
+  extraPackages:
     github-actions-toolkit:
-      # git: "https://github.com/purescript-contrib/purescript-github-actions-toolkit.git"
-      git: "https://github.com/srghma/purescript-github-actions-toolkit.git"
-      ref: "main"
+      git: "https://github.com/purescript-contrib/purescript-github-actions-toolkit.git"
+      ref: "5a56f43c2a1a482368fe635ef5342cdd7e07663c"
