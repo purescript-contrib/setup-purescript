@@ -114,7 +114,8 @@ jobs:
               exit 1
             fi
           else
-            test "$(psa --version)" = "$expected_psa"
+            actual_psa=$(psa --version)
+            test "${actual_psa#v}" = "$expected_psa"
           fi
           echo "EXPECTED_SPAGO=$expected_spago" >> "$GITHUB_ENV"
           echo "EXPECTED_PSA=$expected_psa" >> "$GITHUB_ENV"
@@ -126,7 +127,7 @@ jobs:
         run: |
           if ((spago.cmd --version) -ne $env:EXPECTED_SPAGO) { throw 'Incorrect spago.cmd version' }
           if ($env:TOOLCHAIN -ne 'pinned') {
-            if ((psa.cmd --version) -ne $env:EXPECTED_PSA) { throw 'Incorrect psa.cmd version' }
+            if ((psa.cmd --version).TrimStart('v') -ne $env:EXPECTED_PSA) { throw 'Incorrect psa.cmd version' }
           }
       - name: Build and run a consumer project
         env:
