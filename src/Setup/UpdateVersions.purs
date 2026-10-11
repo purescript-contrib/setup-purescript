@@ -73,12 +73,13 @@ fetchLatestReleaseVersion tool = case tool of
   PureScript -> fetchFromGitHubReleases toolRepository
   Spago -> fetchFromNpmReleases toolRepository.name
   Psa -> fetchFromGitHubTags toolRepository
-  PursTidy -> fetchFromGitHubTags toolRepository
+  -- Tidy's library and CLI versions are independent; install the published CLI.
+  PursTidy -> fetchFromNpmReleases (Tool.name tool)
   Zephyr -> fetchFromGitHubReleases toolRepository
   where
   toolRepository = Tool.repository tool
 
-type NpmOutput = { "dist-tags" :: { latest :: String, next :: String } }
+type NpmOutput = { "dist-tags" :: { latest :: String, next :: Maybe String } }
 
 -- See all versions - https://www.npmjs.com/package/spago?activeTab=versions
 fetchFromNpmReleases :: String -> Aff { latest :: Version, unstable :: Version }
@@ -95,9 +96,9 @@ fetchFromNpmReleases packageName = recover do
               , stringifyWithIndent 2 body
               ]
       Right (npmOutput :: NpmOutput) -> do
-        unstable <- strToVersionOrError npmOutput."dist-tags".next -- for example 0.93.x
+        unstable <- traverse strToVersionOrError npmOutput."dist-tags".next -- for example 0.93.x
         latest <- strToVersionOrError npmOutput."dist-tags".latest -- for example 0.21.0
-        pure { latest, unstable }
+        pure { latest, unstable: fromMaybe latest unstable }
 
   where
   strToVersionOrError :: String -> Aff Version
