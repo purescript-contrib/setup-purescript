@@ -1,0 +1,9 @@
+package:
+  name: setup-purescript-smoke
+  dependencies:
+    - console
+    - effect
+    - prelude
+workspace:
+  packageSet:
+    registry: 50.4.0

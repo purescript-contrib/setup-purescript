@@ -7,7 +7,7 @@ A GitHub Action which sets up a PureScript toolchain for CI. Contains the follow
 
 - The [PureScript compiler](https://github.com/purescript/purescript)
 - The [Spago package manager and build tool](https://github.com/purescript/spago)
-  - Use the `unstable` version for spago-next; otherwise, setup-purescript provides [`spago-legacy`](https://github.com/purescript/spago-legacy); see [issue 37](https://github.com/purescript-contrib/setup-purescript/issues/37)
+  - `latest` currently selects Spago 1.x. Pin an exact legacy version, such as `0.21.0`, for projects using Dhall configuration.
 - The [`psa` error reporting frontend for the compiler](https://github.com/natefaubion/purescript-psa)
 
 You can also optionally include the following tools:
@@ -15,7 +15,9 @@ You can also optionally include the following tools:
 - The [`purs-tidy` code formatter](https://github.com/natefaubion/purescript-tidy)
 - The [Zephyr dead code elimination tool](https://github.com/coot/zephyr)
 
-This action is designed to support PureScript tools. Your PureScript project may also depend on tooling and libraries provided by the NPM ecosystem, in which case you will also want to use the [setup-node](https://github.com/actions/setup-node) action.
+The action itself runs on GitHub's Node24 action runtime. This does **not** select the Node executable on your workflow's `PATH`: installed npm tools use that separate Node installation. Spago 1.0.4 requires Node >=22.5.0. Use [setup-node](https://github.com/actions/setup-node) with Node24 **before** this action, as shown below.
+
+Self-hosted runners need Actions Runner v2.327.1 or newer for the Node24 action runtime. Node24 does not support macOS 13.4 or earlier, or officially support ARM32. The compiler and legacy-tool downloads still use the existing x86-64 tarballs; this runtime update does not add native ARM64 tool installation. Integration tests cover Linux, Intel macOS, and Windows.
 
 ## Usage
 
@@ -27,34 +29,44 @@ Use the PureScript toolchain with the latest versions of PureScript and Spago:
 
 ```yaml
 steps:
-  - uses: actions/checkout@v2
+  - uses: actions/checkout@v7
+  - uses: actions/setup-node@v7
+    with:
+      node-version: "24"
   - uses: purescript-contrib/setup-purescript@main
   - run: spago build
 ```
 
-Other tools are not enabled by default, but you can enable them by specifying their version.
+This installs PureScript, Spago, and PSA. Only purs-tidy and Zephyr are opt-in.
 
 ### Specify Versions
 
 Each tool can accept one of the following:
 - a semantic version (only exact versions currently supported)
-- the string `"latest"`, which represents the latest version that uses major, minor, and patch, but will omit versions using pre-release identifiers or build metadata
-- the string `"unstable"`, which represents the latest version no matter what it is (i.e. pre-release identifiers and build metadata are not considered).
+- `"latest"`, which selects the tool's recorded stable version
+- `"unstable"`, which selects the tool's recorded unstable version
+- `""`, which skips installation of that tool, including tools enabled by default.
+
+Aliases are resolved from [`dist/versions-v2.json`](dist/versions-v2.json) on `main`, even when you pin an action release. For Spago and purs-tidy, the version updater reads npm's `latest` and `next` dist-tags, falling back to `latest` when `next` is absent. `unstable` does not necessarily mean a newer version: Spago's recorded unstable version is currently 0.93.x, while its latest version is 1.x. Use exact tool versions for reproducible selection.
 
 Tools that are not installed by default must be specified this way to be included in the toolchain.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v2
+  - uses: actions/checkout@v7
+  - uses: actions/setup-node@v7
+    with:
+      node-version: "24"
   - uses: purescript-contrib/setup-purescript@main
     with:
-      purescript: "0.14.0"
-      psa: "0.8.2"
-      spago: "latest"
+      purescript: "0.15.15"
+      psa: ""
+      spago: "1.0.4"
       purs-tidy: "latest"
-      zephyr: "0.3.2"
   - run: spago build
 ```
+
+Omitting `psa` still installs it; only the explicit empty string above disables it. Legacy Spago and PSA pins remain supported, for example `spago: "0.21.0"` and `psa: "0.8.2"`. Bower/Pulp consumers can set `spago: ""` if they do not need Spago, and should install Bower/Pulp separately.
 
 ## Full Example Workflow
 
@@ -69,52 +81,49 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
 
       - uses: purescript-contrib/setup-purescript@main
 
       - name: Cache PureScript dependencies
-        uses: actions/cache@v2
-        # This cache uses the .dhall files to know when it should reinstall
-        # and rebuild packages. It caches both the installed packages from
-        # the `.spago` directory and compilation artifacts from the `output`
-        # directory. When restored the compiler will rebuild any files that
-        # have changed. If you do not want to cache compiled output, remove
-        # the `output` path.
+        uses: actions/cache@v6
+        # For registry-based Spago projects. Legacy projects should hash
+        # their *.dhall files instead.
         with:
-          key: ${{ runner.os }}-spago-${{ hashFiles('**/*.dhall') }}
+          key: ${{ runner.os }}-spago-${{ hashFiles('**/spago.yaml', '**/spago.lock') }}
           path: |
             .spago
             output
 
       - run: spago build
 
-      - run: spago test --no-install
+      - run: spago test
 ```
 
 ## Development
 
-Enter a development shell with necessary tools installed:
+Use Node24 and the pinned build tools used by Integration:
 
 ```sh
-nix-shell
-```
-
-If you need any additional tools not included in this Nix expression or available via NPM, please feel free to add them via [easy-purescript-nix](https://github.com/justinwoo/easy-purescript-nix).
-
-Next, install NPM dependencies:
-
-```sh
-npm install
-```
-
-GitHub Actions uses the `action.yml` file to define the action and the `dist/index.js` file to execute it. After making any changes to the source code, make sure those changes are visible by running:
-
-```sh
+npm install --global purescript@0.15.15 spago@1.0.4 purs-tidy@0.11.1
+npm ci
+npm run check
 npm run build
 ```
 
-This will bundle and minify the source code so it is available to the end user.
+`npm run build` compiles and checks dependencies; it does not regenerate the action. After source changes, regenerate the checked-in bundles:
+
+```sh
+npm run bundle
+```
+
+The small `index.js` and `update.js` entry points import freshly compiled code from `output/index.js`. Bundling produces `dist/index.js` (the action) and `dist/update.js` (the version updater). Commit generated bundle changes together with their source. Integration checks that rebuilding produces the committed contents and that two consecutive builds are identical.
+
+Integration also installs default, latest, pinned modern, and pinned legacy toolchains on all three operating systems, checks PSA opt-out and Windows npm shims, and builds/runs small registry and Dhall consumer fixtures. It has read-only repository permissions and never runs the version updater. **Sync Versions is separate:** it writes both shared version manifests and commits/pushes them. Do not run or enable it merely to validate a code change.
 
 ## Used By
 

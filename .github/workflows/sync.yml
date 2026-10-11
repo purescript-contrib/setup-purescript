@@ -8,16 +8,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Otherwise the token used is the GITHUB_TOKEN instead of personal
           persist-credentials: false
           # Otherwise will fail to push refs to destination repo
           fetch-depth: 0
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v7
         with:
-          node-version: "18"
+          node-version: "24"
+          package-manager-cache: false
 
       - name: Update tooling versions
         run: |
